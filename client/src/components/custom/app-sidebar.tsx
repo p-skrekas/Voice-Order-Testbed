@@ -30,16 +30,16 @@ const items = [
     url: "/recorded-voices",
     icon: CassetteTape,
   },
-  {
-    title: "Transcription Benchmarking",
-    url: "/transcription-benchmarking",
-    icon: FlaskConical,
-  },
-  {
-    title: "Settings",
-    url: "#",
-    icon: Settings,
-  },
+  // {
+  //   title: "Transcription Benchmarking",
+  //   url: "/transcription-benchmarking",
+  //   icon: FlaskConical,
+  // },
+  // {
+  //   title: "Settings",
+  //   url: "#",
+  //   icon: Settings,
+  // },
 ]
 
 interface AppSidebarProps {

@@ -120,7 +120,7 @@ function App() {
                   ) : <Navigate to="/login" replace />
                 }
               />
-              <Route
+              {/* <Route
                 path="/transcription-benchmarking"
                 element={
                   isAuthenticated ? (
@@ -133,7 +133,7 @@ function App() {
                     </div>
                   ) : <Navigate to="/login" replace />
                 }
-              />
+              /> */}
               <Route
                 path="/login"
                 element={<Login onLogin={handleLogin} />}
