@@ -22,7 +22,13 @@ import {
 import { Play, Pause } from "lucide-react";
 import { useCustomToast } from "../components/custom/CustomToaster";
 
-const BACKEND_URL = "http://localhost:5000";
+let BACKEND_URL: string;
+if (process.env.NODE_ENV !== 'production') {
+	BACKEND_URL = 'http://localhost:5000';
+} else {
+	BACKEND_URL = process.env.REACT_APP_API_ADDRESS || '';
+}
+
 
 type AudioRecording = {
     _id: string;

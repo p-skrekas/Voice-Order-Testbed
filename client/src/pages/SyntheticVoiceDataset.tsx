@@ -8,7 +8,13 @@ import { useCustomToast } from "../components/custom/CustomToaster";
 import { AudioRecorder } from "react-audio-voice-recorder";
 
 
-let BACKEND_URL = "http://localhost:5000";
+let BACKEND_URL: string;
+if (process.env.NODE_ENV !== 'production') {
+	BACKEND_URL = 'http://localhost:5000';
+} else {
+	BACKEND_URL = process.env.REACT_APP_API_ADDRESS || '';
+}
+
 
 export default function TestCatalog() {
     const [isCreatingFakeOrder, setIsCreatingFakeOrder] = useState(false);
