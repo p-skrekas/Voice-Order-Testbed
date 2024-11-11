@@ -1,6 +1,5 @@
 runtime: nodejs20
 service: server
-
 env: standard
 
 handlers:
@@ -10,4 +9,3 @@ handlers:
 
 includes:
   - .env.yaml
- 
