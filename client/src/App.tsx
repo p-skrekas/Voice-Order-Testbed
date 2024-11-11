@@ -5,7 +5,7 @@ import { Button } from './components/ui/button';
 import { SidebarProvider, SidebarTrigger } from './components/ui/sidebar';
 import { AppSidebar } from './components/custom/app-sidebar';
 import { Mail } from 'lucide-react';
-
+import { CustomToaster } from "./components/custom/CustomToaster";
 
 import Index from './pages/Index';
 import TestCatalog from './pages/SyntheticVoiceDataset';
@@ -87,6 +87,7 @@ function App() {
   return (
     <Router>
       <SidebarProvider>
+        <CustomToaster />
         <div className="flex w-full h-screen">
           {isAuthenticated && <AppSidebar onLogout={handleLogout} />}
           <div className="flex w-full flex-1">

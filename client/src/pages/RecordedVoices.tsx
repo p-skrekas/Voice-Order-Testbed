@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import AudioPlayer from 'react-modern-audio-player';
 import { Card } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Trash2 } from "lucide-react";
@@ -12,6 +11,16 @@ import {
     DialogTrigger,
     DialogFooter,
 } from "../components/ui/dialog";
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "../components/ui/table";
+import { Play, Pause } from "lucide-react";
+import { useCustomToast } from "../components/custom/CustomToaster";
 
 const BACKEND_URL = "http://localhost:5000";
 
@@ -22,15 +31,11 @@ type AudioRecording = {
     mimeType: string;
     createdAt: string;
     duration: number;
+    userEmail: string;
+    orderText: string;
 }
 
-interface AudioData {
-    id: number;
-    name: string;
-    src: string;
-    writer?: string;
-    duration: number;
-}
+type SortDirection = 'asc' | 'desc' | null;
 
 export default function RecordedVoices() {
     const [audioRecordings, setAudioRecordings] = useState<AudioRecording[]>([]);
@@ -39,6 +44,33 @@ export default function RecordedVoices() {
     const [playbackErrors, setPlaybackErrors] = useState<Record<string, string>>({});
     const [recordingToDelete, setRecordingToDelete] = useState<string | null>(null);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [isPlaying, setIsPlaying] = useState<Record<string, boolean>>({});
+    const itemsPerPage = 10;
+    const [totalDuration, setTotalDuration] = useState(0);
+    const [sortConfig, setSortConfig] = useState<{
+        key: 'userEmail' | 'duration' | 'createdAt' | 'orderText';
+        direction: SortDirection;
+    }>({
+        key: 'createdAt',
+        direction: 'desc'
+    });
+    const toast = useCustomToast();
+
+    // Format duration helper function
+    const formatDuration = (seconds: number) => {
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = Math.round(seconds % 60);
+        return `${minutes}m ${remainingSeconds}s`;
+    };
+
+    // Calculate total duration when recordings are fetched
+    useEffect(() => {
+        const total = audioRecordings.reduce((acc, recording) => 
+            acc + (recording.duration || 0), 0
+        );
+        setTotalDuration(total);
+    }, [audioRecordings]);
 
     useEffect(() => {
         fetchAudioRecordings();
@@ -69,20 +101,6 @@ export default function RecordedVoices() {
         }));
     };
 
-    const playList: AudioData[] = audioRecordings.map((recording, index) => {
-        return {
-            id: index + 1,
-            name: recording.title,
-            src: `${BACKEND_URL}/api/audio/${recording._id}`,
-            writer: new Date(recording.createdAt).toLocaleDateString(),
-            duration: typeof recording.duration === 'number' && isFinite(recording.duration) 
-                ? recording.duration 
-                : 0
-        };
-    });
-
-    console.log('Playlist:', playList);
-
     const handleDeleteClick = (recordingId: string) => {
         setRecordingToDelete(recordingId);
         setIsDeleteDialogOpen(true);
@@ -100,22 +118,85 @@ export default function RecordedVoices() {
                 throw new Error('Failed to delete recording');
             }
 
-            // Remove the deleted recording from the state
             setAudioRecordings(prev => 
                 prev.filter(recording => recording._id !== recordingToDelete)
             );
             
-            // Close the dialog
             setIsDeleteDialogOpen(false);
             setRecordingToDelete(null);
+            toast.success('Recording deleted successfully');
         } catch (error) {
             console.error("Error deleting recording:", error);
-            setPlaybackErrors(prev => ({
+            toast.error('Failed to delete recording');
+        }
+    };
+
+    const handlePlayPause = (recordingId: string) => {
+        const audioElement = document.getElementById(`audio-${recordingId}`) as HTMLAudioElement;
+        if (audioElement) {
+            if (isPlaying[recordingId]) {
+                audioElement.pause();
+            } else {
+                audioElement.play();
+            }
+            setIsPlaying(prev => ({
                 ...prev,
-                [recordingToDelete]: 'Failed to delete recording'
+                [recordingId]: !prev[recordingId]
             }));
         }
     };
+
+    // Calculate pagination
+    const totalPages = Math.ceil(audioRecordings.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+
+    // Add sorting function
+    const sortData = (data: AudioRecording[]) => {
+        if (!sortConfig.direction) {
+            return data;
+        }
+
+        return [...data].sort((a, b) => {
+            if (sortConfig.key === 'userEmail') {
+                return sortConfig.direction === 'asc' 
+                    ? a.userEmail.localeCompare(b.userEmail)
+                    : b.userEmail.localeCompare(a.userEmail);
+            }
+            if (sortConfig.key === 'duration') {
+                return sortConfig.direction === 'asc'
+                    ? a.duration - b.duration
+                    : b.duration - a.duration;
+            }
+            if (sortConfig.key === 'orderText') {
+                return sortConfig.direction === 'asc'
+                    ? a.orderText.localeCompare(b.orderText)
+                    : b.orderText.localeCompare(a.orderText);
+            }
+            // Default sort by createdAt
+            return sortConfig.direction === 'asc'
+                ? new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+                : new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        });
+    };
+
+    const handleSort = (key: typeof sortConfig.key) => {
+        setSortConfig(current => ({
+            key,
+            direction: 
+                current.key === key 
+                    ? current.direction === 'asc' 
+                        ? 'desc' 
+                        : current.direction === 'desc' 
+                            ? null 
+                            : 'asc'
+                    : 'asc'
+        }));
+    };
+
+    // Get sorted and paginated data
+    const sortedData = sortData(audioRecordings);
+    const currentRecordings = sortedData.slice(startIndex, endIndex);
 
     if (isLoading) {
         return <div className="p-8">Loading recordings...</div>;
@@ -126,56 +207,131 @@ export default function RecordedVoices() {
     }
 
     return (
-        <div className="flex w-full flex-col gap-3 items-center p-8">
-            <h1 className="text-2xl font-bold mb-6">Recorded Voices</h1>
-            <div className="space-y-4">
-                {audioRecordings.length === 0 ? (
-                    <p className="text-gray-500">No recordings found</p>
-                ) : (
-                    audioRecordings.map((recording, index) => (
-                        <Card key={recording._id} className="p-4">
-                            <div className="flex justify-between items-start mb-2">
-                                <div className="text-sm text-gray-500">
-                                    Duration: {recording.duration} seconds
+        <div className="flex w-full flex-col gap-3 p-8">
+            <div className="flex justify-between items-center mb-6">
+                <h1 className="text-2xl font-bold">Recorded Voices</h1>
+                <div className="text-sm text-muted-foreground bg-muted/50 px-3 py-1 rounded-md">
+                    Total Duration: {formatDuration(totalDuration)}
+                </div>
+            </div>
+            
+            <div className="rounded-md border">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead 
+                                className="cursor-pointer hover:bg-muted/50"
+                                onClick={() => handleSort('userEmail')}
+                            >
+                                <div className="flex items-center gap-2">
+                                    User
+                                    {sortConfig.key === 'userEmail' && (
+                                        <span className="text-xs">
+                                            {sortConfig.direction === 'asc' ? '↑' : sortConfig.direction === 'desc' ? '↓' : ''}
+                                        </span>
+                                    )}
                                 </div>
-                                <Button
-                                    variant="destructive"
-                                    size="sm"
-                                    onClick={() => handleDeleteClick(recording._id)}
-                                    className="ml-2"
-                                >
-                                    <Trash2 className="h-4 w-4" />
-                                </Button>
-                            </div>
-                            {playbackErrors[recording._id] && (
-                                <div className="text-red-500 text-sm mb-2">
-                                    {playbackErrors[recording._id]}
+                            </TableHead>
+                            <TableHead 
+                                className="cursor-pointer hover:bg-muted/50"
+                                onClick={() => handleSort('duration')}
+                            >
+                                <div className="flex items-center gap-2">
+                                    Transcription
+                                    {sortConfig.key === 'orderText' && (
+                                        <span className="text-xs">
+                                            {sortConfig.direction === 'asc' ? '↑' : sortConfig.direction === 'desc' ? '↓' : ''}
+                                        </span>
+                                    )}
                                 </div>
-                            )}
-                            <AudioPlayer
-                                playList={[playList[index]]}
-                                audioInitialState={{
-                                    muted: false,
-                                    volume: 1,
-                                    curPlayId: index + 1,
-                                }}
-                                activeUI={{
-                                    all: false,
-                                    playButton: true,
-                                    playList: false,
-                                    prevNnext: false,
-                                    volume: true,
-                                    volumeSlider: true,
-                                    repeatType: false,
-                                    trackTime: true,
-                                    trackInfo: true,
-                                    artwork: false,
-                                    progress: "waveform"
-                                }}
-                            />
-                        </Card>
-                    ))
-                )}
+                            </TableHead>
+                            <TableHead 
+                                className="cursor-pointer hover:bg-muted/50"
+                                onClick={() => handleSort('createdAt')}
+                            >
+                                <div className="flex items-center gap-2">
+                                    Duration
+                                    {sortConfig.key === 'duration' && (
+                                        <span className="text-xs">
+                                            {sortConfig.direction === 'asc' ? '↑' : sortConfig.direction === 'desc' ? '↓' : ''}
+                                        </span>
+                                    )}
+                                </div>
+                            </TableHead>
+                            <TableHead>Created At</TableHead>
+                            <TableHead>Actions</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {currentRecordings.map((recording) => (
+                            <TableRow key={recording._id}>
+                                <TableCell>{recording.userEmail}</TableCell>
+                                <TableCell className="whitespace-normal break-words max-w-[300px]">
+                                    {recording.orderText}
+                                </TableCell>
+                                <TableCell>{recording.duration} seconds</TableCell>
+                                <TableCell>
+                                    {new Date(recording.createdAt).toLocaleDateString()}
+                                </TableCell>
+                                <TableCell>
+                                    <div className="flex items-center gap-2">
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => handlePlayPause(recording._id)}
+                                        >
+                                            {isPlaying[recording._id] ? (
+                                                <Pause className="h-4 w-4" />
+                                            ) : (
+                                                <Play className="h-4 w-4" />
+                                            )}
+                                        </Button>
+                                        <Button
+                                            variant="destructive"
+                                            size="sm"
+                                            onClick={() => handleDeleteClick(recording._id)}
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                        <audio
+                                            id={`audio-${recording._id}`}
+                                            className="hidden"
+                                            onError={(e) => handlePlaybackError(recording._id, e)}
+                                            src={`${BACKEND_URL}/api/audio/${recording._id}`}
+                                            onEnded={() => setIsPlaying(prev => ({
+                                                ...prev,
+                                                [recording._id]: false
+                                            }))}
+                                        />
+                                    </div>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </div>
+
+            {/* Pagination */}
+            <div className="flex justify-center gap-2 mt-4">
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                >
+                    Previous
+                </Button>
+                <span className="flex items-center px-4">
+                    Page {currentPage} of {totalPages}
+                </span>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                >
+                    Next
+                </Button>
             </div>
 
             <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>

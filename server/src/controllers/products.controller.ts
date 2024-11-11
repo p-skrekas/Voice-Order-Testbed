@@ -99,7 +99,7 @@ const getRandomProducts = async (db: Db): Promise<string[]> => {
     try {
         const products = await db.collection('products').aggregate([
             { $project: { name: 1, _id: 0 } },
-            { $sample: { size:    Math.floor(Math.random() * 10) + 1 } }
+            { $sample: { size:    Math.floor(Math.random() * 5) + 1 } }
         ]).toArray();
 
         return products.map(product => product.name);
@@ -190,12 +190,16 @@ export async function createFakeOrder(req: Request, res: Response, next: NextFun
                 { 
                     role: "user", 
                     content: `
-                    Generate τηε order for the following products in Greek: ${randomProducts.join(', ')}
-                    Use the bare minimum information of the product name to formulate the order.
+                    Generate τhe order for the following products in Greek: ${randomProducts.join(', ')}
+                    Use the bare minimum information of the product name to formulate the order and avoid the description inside parentheses.
+                    Make sure the that the order resembles a real speaking person.
+                    Avoid dashes or other symbols in the order that are not easy to pronounce.
 
                     Examples:
-                    3 τεμάχια IQOS BAGS LARGE και 4 κούτερ MALBORO RED ΣΚΛΗΡΟ.
-                    Πέντε HEETS RUSSET, τρία HEETS AMBER και 10 ASSOS SLIM ΧΡΥΣΟ
+                    3 τεμάχια IQOS BAGS LARGE και 4 κούτες MALBORO RED ΣΚΛΗΡΟ.
+                    Πέντε κούτες HEETS RUSSET, τρείς κούτες HEETS AMBER και 10 ASSOS SLIM ΧΡΥΣΟ.
+
+                    Ένα τεμάχιο IQOS BAGS LARGE και μία κούτα PHILIP MORRIS BLUE 100s.
 
 
                     Respond only with the order, no other text or comments.

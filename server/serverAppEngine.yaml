@@ -1,0 +1,13 @@
+runtime: nodejs20
+service: server
+
+env: standard
+
+handlers:
+  - url: /.*
+    script: auto
+    secure: always
+
+includes:
+  - .env.yaml
+ 

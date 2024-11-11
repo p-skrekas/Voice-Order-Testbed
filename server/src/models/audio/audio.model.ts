@@ -6,7 +6,9 @@ const audioSchema = new mongoose.Schema({
     mimeType: { type: String, required: true },
     duration: { type: Number },
     fileId: { type: mongoose.Schema.Types.ObjectId, required: true }, 
-    createdAt: { type: Date, default: Date.now }
+    createdAt: { type: Date, default: Date.now },
+    userEmail: { type: String, required: true },
+    orderText: { type: String, required: true }
 });
 
 export default mongoose.model('Audio', audioSchema);

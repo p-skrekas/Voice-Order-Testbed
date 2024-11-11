@@ -3,6 +3,9 @@ import bodyParser from "body-parser";
 import mongoose from "mongoose";
 import { HttpError } from "./models/http-error/http-error";
 import dotenv from "dotenv";
+import cors, { CorsOptions } from 'cors';
+import helmet from "helmet";
+import compression from "compression";
 
 import productRoutes from "./routes/product.routes";
 import audioRoutes from "./routes/audio.routes";
@@ -12,10 +15,14 @@ dotenv.config();
 
 const app = express();
 
-console.log(process.env.MONGO_URI);
+// CORS configuration
+const corsOptions: CorsOptions = {
+  optionsSuccessStatus: 200,
+  credentials: true,
+  methods: ['GET', 'POST', 'PATCH', 'DELETE', 'PUT'],
+  allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization']
+};
 
-// Middleware
-app.use(bodyParser.json());
 
 // CORS handling
 app.use((req: Request, res: Response, next: NextFunction) => {
@@ -25,6 +32,25 @@ app.use((req: Request, res: Response, next: NextFunction) => {
     'Origin, X-Requested-With, Content-Type, Accept, Authorization'
   );
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE');
+  next();
+});
+
+// Use cors middleware
+app.use(cors(corsOptions));
+
+// Security Middleware
+app.use(helmet());
+app.use(compression());
+
+// Parse incoming requests data (Middleware)
+app.use(bodyParser.json({ limit: '50mb' }));
+app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
+
+
+// Additional headers (if needed)
+app.use((req: Request, res: Response, next: NextFunction) => {
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
   next();
 });
 

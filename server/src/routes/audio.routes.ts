@@ -22,7 +22,11 @@ router.post('/', upload.single('audio'), async (req, res, next) => {
             throw new HttpError('Invalid duration provided', 400);
         }
 
-        console.log('Received duration:', duration); // Debug log
+        // Validate user email
+        const userEmail = req.body.userEmail;
+        if (!userEmail) {
+            throw new HttpError('User email is required', 400);
+        }
 
         const bucket = getGridFSBucket();
         const filename = `${Date.now()}-${req.file.originalname}`;
@@ -46,7 +50,9 @@ router.post('/', upload.single('audio'), async (req, res, next) => {
             title: req.body.title || 'Untitled Recording',
             mimeType: req.file.mimetype,
             duration: duration,
-            fileId: uploadStream.id
+            fileId: uploadStream.id,
+            userEmail: userEmail,
+            orderText: req.body.orderText || 'No order text provided'
         });
 
         await newAudio.save();
@@ -154,7 +160,9 @@ router.get('/', async (req, res, next) => {
                 filename: recording.filename,
                 mimeType: recording.mimeType,
                 createdAt: recording.createdAt,
-                duration: recording.duration
+                duration: recording.duration,
+                userEmail: recording.userEmail,
+                orderText: recording.orderText
             }))
         });
     } catch (err) {
