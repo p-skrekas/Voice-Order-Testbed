@@ -4,24 +4,18 @@ import { Input } from './components/ui/input';
 import { Button } from './components/ui/button';
 import { SidebarProvider, SidebarTrigger } from './components/ui/sidebar';
 import { AppSidebar } from './components/custom/app-sidebar';
+import { Mail } from 'lucide-react';
 
 
 import Index from './pages/Index';
 import TestCatalog from './pages/SyntheticVoiceDataset';
 import RecordedVoices from './pages/RecordedVoices';
 import TranscriptionBenchmarking from './pages/TranscriptionBenchmarking';
-const allowedEmails = ['paschalis.skrekas@reborrn.com'];
-const allowedPassword = 'admin';
+const allowedPassword = 'mouhalis';
 
-function Home() {
-  return <h1 className="text-3xl font-bold underline">Hello world!</h1>;
-}
 
-function About() {
-  return <h1>About Page</h1>;
-}
 
-function Login({ onLogin }: { onLogin: () => void }) {
+function Login({ onLogin }: { onLogin: (email: string) => void }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -29,8 +23,8 @@ function Login({ onLogin }: { onLogin: () => void }) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (allowedEmails.includes(email) && password === allowedPassword) {
-      onLogin();
+    if (email.split('@')[1] === 'reborrn.com' && password === allowedPassword) {
+      onLogin(email);
       navigate('/');
     } else {
       setError('Invalid email or password');
@@ -38,13 +32,14 @@ function Login({ onLogin }: { onLogin: () => void }) {
   };
 
   return (
-    <div className='flex flex-col items-center justify-center h-screen gap-4'>
+    <div className='flex flex-col w-full items-center justify-center h-screen gap-4'>
       <h1>Login</h1>
-      <form onSubmit={handleSubmit} className='flex flex-col items-center justify-center gap-4'>
+      <form onSubmit={handleSubmit} className='flex flex-col w-[400px] items-center justify-center gap-4'>
         <Input
           type="email"
           placeholder="Email"
           value={email}
+          className='w-full'
           onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
         />
         <Input
@@ -60,15 +55,28 @@ function Login({ onLogin }: { onLogin: () => void }) {
   );
 }
 
+function UserEmailDisplay({ email }: { email: string }) {
+  return (
+    <div className="text-sm text-gray-600 flex items-center gap-2 bg-gray-100 p-2 rounded-md">
+      <Mail size={16} />
+      {email}
+    </div>
+  );
+}
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     return localStorage.getItem('isAuthenticated') === 'true';
   });
+  const [userEmail, setUserEmail] = useState(() => {
+    return localStorage.getItem('userEmail') || '';
+  });
 
-  const handleLogin = () => {
+  const handleLogin = (email: string) => {
     setIsAuthenticated(true);
+    setUserEmail(email);
     localStorage.setItem('isAuthenticated', 'true');
+    localStorage.setItem('userEmail', email);
   };
 
   const handleLogout = () => {
@@ -87,10 +95,13 @@ function App() {
                 path="/"
                 element={
                   isAuthenticated ? (
-                    <>
-                      <SidebarTrigger />
+                    <div className="flex flex-col w-full">
+                      <div className="flex justify-between items-center p-4 border-b">
+                        <SidebarTrigger />
+                        <UserEmailDisplay email={userEmail} />
+                      </div>
                       <Index />
-                    </>
+                    </div>
                   ) : <Navigate to="/login" replace />
                 }
               />
@@ -98,10 +109,13 @@ function App() {
                 path="/recorded-voices"
                 element={
                   isAuthenticated ? (
-                    <>
-                      <SidebarTrigger />
+                    <div className="flex flex-col w-full">
+                      <div className="flex justify-between items-center p-4 border-b">
+                        <SidebarTrigger />
+                        <UserEmailDisplay email={userEmail} />
+                      </div>
                       <RecordedVoices />
-                    </>
+                    </div>
                   ) : <Navigate to="/login" replace />
                 }
               />
@@ -109,10 +123,13 @@ function App() {
                 path="/transcription-benchmarking"
                 element={
                   isAuthenticated ? (
-                    <>
-                      <SidebarTrigger />
+                    <div className="flex flex-col w-full">
+                      <div className="flex justify-between items-center p-4 border-b">
+                        <SidebarTrigger />
+                        <UserEmailDisplay email={userEmail} />
+                      </div>
                       <TranscriptionBenchmarking />
-                    </>
+                    </div>
                   ) : <Navigate to="/login" replace />
                 }
               />
@@ -121,13 +138,16 @@ function App() {
                 element={<Login onLogin={handleLogin} />}
               />
               <Route
-                path="/test-catalog"
+                path="/synthetic-voice-orders"
                 element={
                   isAuthenticated ? (
-                    <>
-                      <SidebarTrigger />
+                    <div className="flex flex-col w-full">
+                      <div className="flex justify-between items-center p-4 border-b">
+                        <SidebarTrigger />
+                        <UserEmailDisplay email={userEmail} />
+                      </div>
                       <TestCatalog />
-                    </>
+                    </div>
                   ) : <Navigate to="/login" replace />
                 }
               />

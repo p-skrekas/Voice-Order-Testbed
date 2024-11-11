@@ -1,4 +1,4 @@
-import { CassetteTape , Home, AudioWaveform , FlaskConical , Settings } from "lucide-react"
+import { CassetteTape, Home, AudioWaveform, FlaskConical, Settings, LogOut } from "lucide-react"
 
 import {
   Sidebar,
@@ -22,13 +22,13 @@ const items = [
   },
   {
     title: "Synthetic Voice Dataset",
-    url: "/test-catalog",
-    icon: AudioWaveform ,
+    url: "/synthetic-voice-orders",
+    icon: AudioWaveform,
   },
   {
     title: "Recorded Voices",
     url: "/recorded-voices",
-    icon: CassetteTape ,
+    icon: CassetteTape,
   },
   {
     title: "Transcription Benchmarking",
@@ -51,7 +51,7 @@ export function AppSidebar({ onLogout }: AppSidebarProps) {
     <Sidebar>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Application</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-[1.1rem] font-bold mb-3">Mouhalis Voice Orders</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => (
@@ -68,7 +68,12 @@ export function AppSidebar({ onLogout }: AppSidebarProps) {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <Button onClick={onLogout}>Logout</Button>
+      <div className="flex p-3">
+        <Button variant="destructive" onClick={onLogout} className="w-full">
+          <LogOut />
+          Logout
+        </Button>
+      </div>
     </Sidebar>
   )
 }
