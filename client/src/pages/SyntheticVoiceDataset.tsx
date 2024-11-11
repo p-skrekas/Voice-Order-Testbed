@@ -15,6 +15,8 @@ if (process.env.NODE_ENV !== 'production') {
 	BACKEND_URL = process.env.REACT_APP_API_ADDRESS || '';
 }
 
+console.log(BACKEND_URL);
+
 
 export default function TestCatalog() {
     const [isCreatingFakeOrder, setIsCreatingFakeOrder] = useState(false);

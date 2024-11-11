@@ -29,6 +29,8 @@ if (process.env.NODE_ENV !== 'production') {
 	BACKEND_URL = process.env.REACT_APP_API_ADDRESS || '';
 }
 
+console.log(BACKEND_URL);
+
 
 type AudioRecording = {
     _id: string;
