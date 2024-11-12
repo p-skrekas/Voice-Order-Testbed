@@ -3,6 +3,10 @@ import { useState } from "react";
 interface Message {
     role: string;
     content: string;
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+    cost: number;
 }
 
 let BACKEND_URL: string;
@@ -16,17 +20,18 @@ if (process.env.NODE_ENV !== 'production') {
 export default function Chat() {
     const [messages, setMessages] = useState<Message[]>([]);
     const [inputMessage, setInputMessage] = useState('');
+    const [llm, setLlm] = useState("gpt-4o-2024-08-06");
 
     const handleSendMessage = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!inputMessage.trim()) return;
 
-        setMessages([...messages, { role: "user", content: inputMessage.trim() }]);
+        setMessages([...messages, { role: "user", content: inputMessage.trim(), promptTokens: 0, completionTokens: 0, totalTokens: 0, cost: 0 }]);
         setInputMessage('');
 
-        messages.push({ role: "user", content: inputMessage.trim() });
+        messages.push({ role: "user", content: inputMessage.trim(), promptTokens: 0, completionTokens: 0, totalTokens: 0, cost: 0 });
 
-
+        
         try {
             const response = await fetch(`${BACKEND_URL}/api/chat/getOpenAIResponse`, {
                 method: "POST",
@@ -34,7 +39,7 @@ export default function Chat() {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    llm: "gpt-4o-2024-08-06",
+                    llm: llm,
                     query: inputMessage.trim(),
                     messages: messages
                 }),
@@ -42,7 +47,7 @@ export default function Chat() {
 
             const data = await response.json();
             console.log(data);
-            setMessages([...messages, { role: "assistant", content: data.aiResponse }]);
+            setMessages([...messages, { role: "assistant", content: data.aiResponse, promptTokens: 0, completionTokens: 0, totalTokens: 0, cost: data.cost }]);
 
         } catch (error) {
             console.error("Error fetching OpenAI response:", error);
@@ -62,15 +67,19 @@ export default function Chat() {
                                 key={index}
                                 className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                             >
-                                    <div className={`flex flex-col w-full ${message.role === 'user' ? 'items-end' : 'items-start'}`}>
-                                        {message.role === 'user' ? 'User' : 'Assistant'}
-                                        <div
-                                            className={`flex w-[70%] rounded-lg p-3 ${message.role === 'user'
+                                <div className={`flex flex-col w-full ${message.role === 'user' ? 'items-end' : 'items-start'}`}>
+                                    {message.role === 'user' ? 'User' : `Assistant (${llm})`}
+                                    <div
+                                        className={`flex w-[70%] rounded-lg p-3 ${message.role === 'user'
                                             ? 'bg-gray-600 text-white'
                                             : 'bg-gray-200 text-gray-800'
                                             }`}
                                     >
                                         {message.content}
+
+                                    </div>
+                                    <div>
+                                        {message.role === 'assistant' && <span className="text-xs text-gray-500">Cost: ${message.cost.toFixed(6)}</span>}                                      
                                     </div>
                                 </div>
                             </div>

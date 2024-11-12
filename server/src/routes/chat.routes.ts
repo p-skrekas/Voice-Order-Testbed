@@ -78,7 +78,20 @@ const getOpenAIResponse = async (req: GetOpenAIResponseRequest, res: Response, n
         });
 
 
-        res.status(200).json({ aiResponse: responseMessage, messages: messages });
+        let cost:number = 0;
+        if (llm === 'gpt-4o-2024-08-06') {
+            const input_tokens_cost = 2.5 / 1000000;
+            const output_tokens_cost = 10 / 1000000;
+            cost = (data.usage.prompt_tokens * input_tokens_cost) + (data.usage.completion_tokens * output_tokens_cost);
+        } 
+        res.status(200).json({ 
+            aiResponse: responseMessage,
+             messages: messages,
+             promptTokens: data.usage.prompt_tokens,
+             completionTokens: data.usage.completion_tokens,
+             totalTokens: data.usage.total_tokens,
+             cost: cost
+            });
     } catch (error) {
         next(error);
     }
