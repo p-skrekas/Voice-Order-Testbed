@@ -25,18 +25,28 @@ const frontendOrigin = process.env.NODE_ENV === 'production'
 // CORS configuration
 const corsOptions: CorsOptions = {
   origin: (origin, callback) => {
-    const allowedOrigins = [frontendOrigin, 'https://ai.reborrn.com', 'https://ai.reborrn.com/'].filter(Boolean);
+    const allowedOrigins = [
+      frontendOrigin,
+      'https://mouhalis-voice-order.lm.r.appspot.com',
+      'https://mouhalis-voice-order.lm.r.appspot.com/',
+      'https://ai.reborrn.com',
+      'https://ai.reborrn.com/'
+    ].filter(Boolean);
+    
     if (!origin || allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
+      console.log('Blocked by CORS:', origin);
       callback(new Error('Not allowed by CORS'));
     }
   },
   optionsSuccessStatus: 200,
   credentials: true,
-  methods: ['GET', 'POST', 'PATCH', 'DELETE', 'PUT'],
-  allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization']
+  methods: ['GET', 'POST', 'PATCH', 'DELETE', 'PUT', 'OPTIONS'],
+  allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization', 'Range'],
+  exposedHeaders: ['Accept-Ranges', 'Content-Range', 'Content-Length', 'Content-Type']
 };
+
 
 // Use cors middleware
 app.use(cors(corsOptions));
@@ -50,12 +60,24 @@ app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
 
 
-// Additional headers (if needed)
+// Additional headers for audio streaming
 app.use((req: Request, res: Response, next: NextFunction) => {
-  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
-  res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
+  // Remove COEP and COOP headers that are blocking audio streaming
+  res.removeHeader('Cross-Origin-Opener-Policy');
+  res.removeHeader('Cross-Origin-Embedder-Policy');
+  
+  // Add necessary headers for audio streaming
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
   next();
 });
+
+// Debugging middleware
+app.use((req, res, next) => {
+  console.log('Request Origin:', req.headers.origin);
+  console.log('Request Method:', req.method);
+  next();
+});
+
 
 // Routes
 app.use("/api/products", productRoutes);

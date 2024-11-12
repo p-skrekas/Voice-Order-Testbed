@@ -33,6 +33,9 @@ function Login({ onLogin }: { onLogin: (email: string) => void }) {
 
   return (
     <div className='flex flex-col w-full items-center justify-center h-screen gap-4'>
+      <span className='text-2xl font-bold'>
+        Mouhalis Voice Order
+      </span>
       <h1>Login</h1>
       <form onSubmit={handleSubmit} className='flex flex-col w-[400px] items-center justify-center gap-4'>
         <Input
