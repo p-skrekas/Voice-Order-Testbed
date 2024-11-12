@@ -2,11 +2,26 @@ runtime: python39
 service: default
 
 handlers:
-  - url: /(.*\.(json|ico|js|css|png|jpg|gif|woff|woff2|ttf|svg))$
-    static_files: build/\1
-    upload: build/.*\.(json|ico|js|css|png|jpg|gif|woff|woff2|ttf|svg)$
+  # Serve static files
+  - url: /static/js
+    static_dir: build/static/js
     secure: always
 
+  - url: /static/css
+    static_dir: build/static/css
+    secure: always
+
+  - url: /static/media
+    static_dir: build/static/media
+    secure: always
+
+  # Serve other static assets
+  - url: /(.*\.(json|ico|png|txt))$
+    static_files: build/\1
+    upload: build/.*\.(json|ico|png|txt)$
+    secure: always
+
+  # All other routes go to index.html
   - url: /.*
     static_files: build/index.html
     upload: build/index.html

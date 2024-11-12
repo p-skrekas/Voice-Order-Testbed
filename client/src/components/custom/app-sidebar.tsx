@@ -51,7 +51,9 @@ export function AppSidebar({ onLogout }: AppSidebarProps) {
     <Sidebar>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel className="text-[1.1rem] font-bold mb-3">Mouhalis Voice Orders</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-[1.1rem] font-bold mb-3">
+            Mouhalis Voice Order
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => (
