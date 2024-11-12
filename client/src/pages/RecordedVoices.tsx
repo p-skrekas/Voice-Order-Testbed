@@ -19,7 +19,7 @@ import {
     TableHeader,
     TableRow,
 } from "../components/ui/table";
-import { Play, Pause } from "lucide-react";
+import { Play, Pause, Download, Loader2 } from "lucide-react";
 import { useCustomToast } from "../components/custom/CustomToaster";
 
 let BACKEND_URL: string;
@@ -64,6 +64,7 @@ export default function RecordedVoices() {
         direction: 'desc'
     });
     const toast = useCustomToast();
+    const [isDownloadingAll, setIsDownloadingAll] = useState(false);
 
     // Format duration helper function
     const formatDuration = (seconds: number) => {
@@ -206,6 +207,44 @@ export default function RecordedVoices() {
     const sortedData = sortData(audioRecordings);
     const currentRecordings = sortedData.slice(startIndex, endIndex);
 
+    const handleDownload = async (recordingId: string, filename: string) => {
+        try {
+            const response = await fetch(`${BACKEND_URL}/api/audio/${recordingId}`);
+            if (!response.ok) throw new Error('Download failed');
+            
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        } catch (error) {
+            console.error("Error downloading recording:", error);
+            toast.error('Failed to download recording');
+        }
+    };
+
+    const handleDownloadAll = async () => {
+        setIsDownloadingAll(true);
+        try {
+            // Create a delay between downloads to prevent overwhelming the browser
+            for (const recording of audioRecordings) {
+                await handleDownload(recording._id, recording.filename);
+                // Add a small delay between downloads
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+            toast.success('All recordings downloaded successfully');
+        } catch (error) {
+            console.error("Error downloading all recordings:", error);
+            toast.error('Failed to download all recordings');
+        } finally {
+            setIsDownloadingAll(false);
+        }
+    };
+
     if (isLoading) {
         return <div className="p-8">Loading recordings...</div>;
     }
@@ -217,7 +256,26 @@ export default function RecordedVoices() {
     return (
         <div className="flex w-full flex-col gap-3 p-8">
             <div className="flex justify-between items-center mb-6">
-                <h1 className="text-2xl font-bold">Recorded Voices</h1>
+                <div className="flex flex-col items-center gap-4">
+                    <h1 className="text-2xl font-bold">Recorded Voices</h1>
+                    <Button 
+                        variant="outline"
+                        onClick={handleDownloadAll}
+                        disabled={isDownloadingAll || audioRecordings.length === 0}
+                    >
+                        {isDownloadingAll ? (
+                            <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                Downloading...
+                            </>
+                        ) : (
+                            <>
+                                <Download className="h-4 w-4 mr-2" />
+                                Download All ({audioRecordings.length})
+                            </>
+                        )}
+                    </Button>
+                </div>
                 <div className="text-sm text-muted-foreground bg-muted/50 px-3 py-1 rounded-md">
                     Total Duration: {formatDuration(totalDuration)}
                 </div>
@@ -293,6 +351,13 @@ export default function RecordedVoices() {
                                             ) : (
                                                 <Play className="h-4 w-4" />
                                             )}
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => handleDownload(recording._id, recording.filename)}
+                                        >
+                                            <Download className="h-4 w-4" />
                                         </Button>
                                         <Button
                                             variant="destructive"
