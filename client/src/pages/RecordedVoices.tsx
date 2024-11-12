@@ -257,7 +257,7 @@ export default function RecordedVoices() {
         <div className="flex w-full flex-col gap-3 p-8">
             <div className="flex justify-between items-center mb-6">
                 <div className="flex flex-col items-center gap-4">
-                    <h1 className="text-2xl font-bold">Recorded Voices</h1>
+                    <h1 className="text-2xl font-bold">Recorded Order</h1>
                     <Button 
                         variant="outline"
                         onClick={handleDownloadAll}
