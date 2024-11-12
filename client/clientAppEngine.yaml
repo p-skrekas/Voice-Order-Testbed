@@ -29,3 +29,12 @@ handlers:
 
 includes:
   - .env.yaml
+
+# Add system updates and ffmpeg installation
+runtime_config:
+  operating_system: "ubuntu22"
+
+lifecycle:
+  preinstall:
+    - apt-get update
+    - apt-get install -y ffmpeg

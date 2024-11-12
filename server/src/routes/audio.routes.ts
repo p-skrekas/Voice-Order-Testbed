@@ -5,6 +5,8 @@ import Audio from '../models/audio/audio.model';
 import { getGridFSBucket } from '../utils/gridfs-storage';
 import { HttpError } from '../models/http-error/http-error';
 import mongoose from 'mongoose';
+import ffmpeg from 'fluent-ffmpeg';
+import { PassThrough } from 'stream';
 
 const router = express.Router();
 const upload = multer();
@@ -167,5 +169,42 @@ router.get('/', async (req, res, next) => {
         });
     } catch (err) {
         next(new HttpError('Failed to fetch audio recordings', 500));
+    }
+});
+
+// Add this new route for MP3 download
+router.get('/:id/mp3', async (req, res, next) => {
+    try {
+        const audio = await Audio.findById(req.params.id);
+        if (!audio) {
+            throw new HttpError('Audio not found', 404);
+        }
+
+        const bucket = getGridFSBucket();
+        const downloadStream = bucket.openDownloadStream(new mongoose.Types.ObjectId(audio.fileId));
+
+        // Set up response headers for MP3
+        res.set({
+            'Content-Type': 'audio/mpeg',
+            'Content-Disposition': `attachment; filename="${audio.filename.replace(/\.[^/.]+$/, '')}.mp3"`,
+        });
+
+        // Create a pass-through stream for ffmpeg
+        const passThroughStream = new PassThrough();
+
+        // Set up ffmpeg conversion
+        ffmpeg(downloadStream)
+            .toFormat('mp3')
+            .on('error', (err) => {
+                console.error('FFmpeg error:', err);
+                next(new HttpError('Failed to convert audio', 500));
+            })
+            .pipe(passThroughStream);
+
+        // Pipe the converted stream to response
+        passThroughStream.pipe(res);
+
+    } catch (err) {
+        next(new HttpError('Failed to retrieve audio', 500));
     }
 });

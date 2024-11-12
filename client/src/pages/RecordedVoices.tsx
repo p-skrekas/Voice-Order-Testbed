@@ -21,6 +21,12 @@ import {
 } from "../components/ui/table";
 import { Play, Pause, Download, Loader2 } from "lucide-react";
 import { useCustomToast } from "../components/custom/CustomToaster";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "../components/ui/dropdown-menu";
 
 let BACKEND_URL: string;
 if (process.env.NODE_ENV !== 'production') {
@@ -207,7 +213,7 @@ export default function RecordedVoices() {
     const sortedData = sortData(audioRecordings);
     const currentRecordings = sortedData.slice(startIndex, endIndex);
 
-    const handleDownload = async (recordingId: string, filename: string) => {
+    const handleDownloadOriginal = async (recordingId: string, filename: string) => {
         try {
             const response = await fetch(`${BACKEND_URL}/api/audio/${recordingId}`);
             if (!response.ok) throw new Error('Download failed');
@@ -227,13 +233,47 @@ export default function RecordedVoices() {
         }
     };
 
+    const handleDownloadMp3 = async (recordingId: string, filename: string) => {
+        try {
+            const response = await fetch(`${BACKEND_URL}/api/audio/${recordingId}/mp3`);
+            if (!response.ok) throw new Error('Download failed');
+            
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename.replace(/\.[^/.]+$/, '') + '.mp3';
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        } catch (error) {
+            console.error("Error downloading MP3:", error);
+            toast.error('Failed to download MP3');
+        }
+    };
+
+    const handleDownloadAllMp3 = async () => {
+        setIsDownloadingAll(true);
+        try {
+            for (const recording of audioRecordings) {
+                await handleDownloadMp3(recording._id, recording.filename);
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+            toast.success('All MP3s downloaded successfully');
+        } catch (error) {
+            console.error("Error downloading all MP3s:", error);
+            toast.error('Failed to download all MP3s');
+        } finally {
+            setIsDownloadingAll(false);
+        }
+    };
+
     const handleDownloadAll = async () => {
         setIsDownloadingAll(true);
         try {
-            // Create a delay between downloads to prevent overwhelming the browser
             for (const recording of audioRecordings) {
-                await handleDownload(recording._id, recording.filename);
-                // Add a small delay between downloads
+                await handleDownloadOriginal(recording._id, recording.filename);
                 await new Promise(resolve => setTimeout(resolve, 500));
             }
             toast.success('All recordings downloaded successfully');
@@ -258,23 +298,34 @@ export default function RecordedVoices() {
             <div className="flex justify-between items-center mb-6">
                 <div className="flex flex-col items-center gap-4">
                     <h1 className="text-2xl font-bold">Recorded Order</h1>
-                    <Button 
-                        variant="outline"
-                        onClick={handleDownloadAll}
-                        disabled={isDownloadingAll || audioRecordings.length === 0}
-                    >
-                        {isDownloadingAll ? (
-                            <>
-                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                Downloading...
-                            </>
-                        ) : (
-                            <>
-                                <Download className="h-4 w-4 mr-2" />
-                                Download All ({audioRecordings.length})
-                            </>
-                        )}
-                    </Button>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button 
+                                variant="outline"
+                                disabled={isDownloadingAll || audioRecordings.length === 0}
+                            >
+                                {isDownloadingAll ? (
+                                    <>
+                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                        Downloading...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Download className="h-4 w-4 mr-2" />
+                                        Download All ({audioRecordings.length})
+                                    </>
+                                )}
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                            <DropdownMenuItem onClick={handleDownloadAll}>
+                                Original Format
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={handleDownloadAllMp3}>
+                                MP3 Format
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
                 <div className="text-sm text-muted-foreground bg-muted/50 px-3 py-1 rounded-md">
                     Total Duration: {formatDuration(totalDuration)}
@@ -352,13 +403,25 @@ export default function RecordedVoices() {
                                                 <Play className="h-4 w-4" />
                                             )}
                                         </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => handleDownload(recording._id, recording.filename)}
-                                        >
-                                            <Download className="h-4 w-4" />
-                                        </Button>
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="ghost" size="sm">
+                                                    <Download className="h-4 w-4" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent>
+                                                <DropdownMenuItem 
+                                                    onClick={() => handleDownloadOriginal(recording._id, recording.filename)}
+                                                >
+                                                    Original Format
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem 
+                                                    onClick={() => handleDownloadMp3(recording._id, recording.filename)}
+                                                >
+                                                    MP3 Format
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
                                         <Button
                                             variant="destructive"
                                             size="sm"
