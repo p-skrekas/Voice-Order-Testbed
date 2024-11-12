@@ -15,25 +15,28 @@ dotenv.config();
 
 const app = express();
 
+
+
+const frontendOrigin = process.env.NODE_ENV === 'production'
+  ? process.env.FRONTEND_ORIGIN_PROD
+  : process.env.FRONTEND_ORIGIN_DEV;
+
+
 // CORS configuration
 const corsOptions: CorsOptions = {
+  origin: (origin, callback) => {
+    const allowedOrigins = [frontendOrigin, 'https://ai.reborrn.com', 'https://ai.reborrn.com/'].filter(Boolean);
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   optionsSuccessStatus: 200,
   credentials: true,
   methods: ['GET', 'POST', 'PATCH', 'DELETE', 'PUT'],
   allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization']
 };
-
-
-// CORS handling
-app.use((req: Request, res: Response, next: NextFunction) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader(
-    'Access-Control-Allow-Headers',
-    'Origin, X-Requested-With, Content-Type, Accept, Authorization'
-  );
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE');
-  next();
-});
 
 // Use cors middleware
 app.use(cors(corsOptions));
@@ -82,8 +85,8 @@ mongoose.connect(process.env.MONGO_URI)
   .then(async () => {
     console.log("Connected to MongoDB");
     initGridFS(); // Initialize GridFS after connection
-    app.listen({ port: 5000 }, () => {
-      console.log(`Server is listening at port: 5000`);
+    app.listen(process.env.PORT || 5000, () => {
+      console.log(`Server is listening at port: ${process.env.PORT || 5000}`);
     });
   })
   .catch(err => {
