@@ -1,4 +1,4 @@
-import express from 'express';
+import { Router } from "express";
 import multer from 'multer';
 import { Readable } from 'stream';
 import Audio from '../models/audio/audio.model';
@@ -8,7 +8,7 @@ import mongoose from 'mongoose';
 import ffmpeg from 'fluent-ffmpeg';
 import { PassThrough } from 'stream';
 
-const router = express.Router();
+const router = Router();
 const upload = multer();
 
 // POST route to save audio

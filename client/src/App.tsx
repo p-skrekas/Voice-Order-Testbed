@@ -10,7 +10,9 @@ import { CustomToaster } from "./components/custom/CustomToaster";
 import Index from './pages/Index';
 import TestCatalog from './pages/SyntheticVoiceDataset';
 import RecordedVoices from './pages/RecordedVoices';
+import Chat from './pages/Chat';
 import TranscriptionBenchmarking from './pages/TranscriptionBenchmarking';
+import Settings from './pages/Settings';
 const allowedPassword = 'mouhalis';
 
 
@@ -119,6 +121,34 @@ function App() {
                         <UserEmailDisplay email={userEmail} />
                       </div>
                       <RecordedVoices />
+                    </div>
+                  ) : <Navigate to="/login" replace />
+                }
+              />
+              <Route
+                path="/chat"
+                element={
+                  isAuthenticated ? (
+                    <div className="flex flex-col w-full">
+                      <div className="flex justify-between items-center p-4 border-b">
+                        <SidebarTrigger />
+                        <UserEmailDisplay email={userEmail} />
+                      </div>
+                      <Chat />
+                    </div>
+                  ) : <Navigate to="/login" replace />
+                }
+              />
+              <Route
+                path="/settings"
+                element={
+                  isAuthenticated ? (
+                    <div className="flex flex-col w-full">
+                      <div className="flex justify-between items-center p-4 border-b">
+                        <SidebarTrigger />
+                        <UserEmailDisplay email={userEmail} />
+                      </div>
+                      <Settings />
                     </div>
                   ) : <Navigate to="/login" replace />
                 }

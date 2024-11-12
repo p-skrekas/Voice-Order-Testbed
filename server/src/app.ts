@@ -9,6 +9,10 @@ import compression from "compression";
 
 import productRoutes from "./routes/product.routes";
 import audioRoutes from "./routes/audio.routes";
+import settingsRoutes from "./routes/settings.routes";
+import chatRoutes from "./routes/chat.routes";
+
+
 import { initGridFS } from './utils/gridfs-storage';
 
 dotenv.config();
@@ -71,17 +75,12 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
-// Debugging middleware
-app.use((req, res, next) => {
-  console.log('Request Origin:', req.headers.origin);
-  console.log('Request Method:', req.method);
-  next();
-});
-
 
 // Routes
 app.use("/api/products", productRoutes);
 app.use("/api/audio", audioRoutes);
+app.use("/api/settings", settingsRoutes);
+app.use("/api/chat", chatRoutes);
 
 // Handle non-existing routes
 app.use((req: Request, res: Response, next: NextFunction) => {

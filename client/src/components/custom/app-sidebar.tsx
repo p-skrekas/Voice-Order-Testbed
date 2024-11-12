@@ -1,4 +1,4 @@
-import { CassetteTape, Home, AudioWaveform, FlaskConical, Settings, LogOut } from "lucide-react"
+import { CassetteTape, Home, AudioWaveform, Cog, MessageCircle, LogOut } from "lucide-react"
 
 import {
   Sidebar,
@@ -29,6 +29,16 @@ const items = [
     title: "Recorded Voices",
     url: "/recorded-voices",
     icon: CassetteTape,
+  },
+  {
+    title: "Chat",
+    url: "/chat",
+    icon: MessageCircle,
+  },
+  {
+    title: "Settings",
+    url: "/settings",
+    icon: Cog,
   },
   // {
   //   title: "Transcription Benchmarking",
