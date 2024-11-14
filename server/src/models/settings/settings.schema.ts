@@ -4,7 +4,12 @@ import { Settings } from "./settings.interface";
 const SettingsSchema = new Schema({
     systemPrompt: {
         type: String,
-        required: true,
+        required: false,
+    },
+    numResultsForVectorSearch: {
+        type: Number,
+        required: false,
+        default: 50,
     },
 });
 

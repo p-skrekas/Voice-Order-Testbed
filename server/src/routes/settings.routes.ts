@@ -12,7 +12,8 @@ const getSettings: RequestHandler = async (req, res, next) => {
         const settings = await SettingsModel.findOne();
         if (!settings) {
             const defaultSettings = new SettingsModel({
-                systemPrompt: "Default system prompt"
+                systemPrompt: "Default system prompt",
+                numResultsForVectorSearch: 20
             });
             await defaultSettings.save();
             res.status(200).json(defaultSettings);
@@ -46,7 +47,30 @@ const updateSystemPrompt: RequestHandler = async (req, res, next) => {
     }
 };
 
+const updateVectorSearchSettings: RequestHandler = async (req, res, next) => {
+    try {
+        const { numProducts } = req.body;
+        
+        let settings = await SettingsModel.findOne();
+        if (!settings) {
+            settings = new SettingsModel({
+                numResultsForVectorSearch: parseInt(numProducts)
+            });
+        } else {
+            settings.numResultsForVectorSearch = parseInt(numProducts);
+        }
+        
+        await settings.save();
+        res.status(200).json(settings);
+    } catch (error) {
+        console.error('Update error:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        next(new HttpError(`Failed to update vector search settings: ${errorMessage}`, 500));
+    }
+};
+
 router.get("/", getSettings);
 router.put("/system-prompt", updateSystemPrompt);
+router.put("/vector-search", updateVectorSearchSettings);
 
 export default router;

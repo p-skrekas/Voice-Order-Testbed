@@ -5,6 +5,7 @@ import { HttpError } from "../models/http-error/http-error";
 import mongoose from 'mongoose';
 import { StatusCodes } from "http-status-codes";
 import { Db } from 'mongodb';
+import { getEmbedding } from "../utils/ai/embedding";
 
 
 dotenv.config();
@@ -19,28 +20,6 @@ const openai = new OpenAI({
 });
 
 
-// Interface for search response
-interface SearchResponse {
-    results: string;
-    count: number;
-    query: string;
-    success: boolean;
-}
-
-
-
-async function getEmbedding(text: string): Promise<number[]> {
-    try {
-        const response = await openai.embeddings.create({
-            model: process.env.OPENAI_MODEL_NAME || "text-embedding-3-large",
-            input: text,
-        });
-        return response.data[0].embedding;
-    } catch (error) {
-        console.error("Error generating embedding:", error);
-        throw new HttpError("Failed to generate embedding", 500);
-    }
-}
 
 export async function performVectorSearch(
     collectionName: string,
