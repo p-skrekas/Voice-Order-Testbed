@@ -179,6 +179,8 @@ const getOpenAIResponse = async (req: GetOpenAIResponseRequest, res: Response, n
 
             const responseMessage = dataWithTools.choices[0].message.content;
 
+            console.log(responseMessage);
+
             messages.push({
                 role: "assistant",
                 content: responseMessage

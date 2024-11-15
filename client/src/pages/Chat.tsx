@@ -434,10 +434,16 @@ export default function Chat() {
                                 onChange={(e) => setInputMessage(e.target.value)}
                                 placeholder="Type a message..."
                                 className="flex-1 text-sm rounded-lg border p-2 focus:outline-none focus:border-blue-500"
+                                disabled={isTyping}
                             />
                             <button
                                 type="submit"
-                                className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600"
+                                disabled={isTyping}
+                                className={`px-4 py-2 rounded-lg text-white ${
+                                    isTyping 
+                                    ? 'bg-blue-300 cursor-not-allowed' 
+                                    : 'bg-blue-500 hover:bg-blue-600'
+                                }`}
                             >
                                 Send
                             </button>
