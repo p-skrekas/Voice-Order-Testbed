@@ -16,6 +16,7 @@
     "@types/express": "^5.0.0",
     "@types/multer": "^1.4.12",
     "nodemon": "^3.1.7",
+    "ts-node": "^10.9.2",
     "typescript": "^5.6.3"
   },
   "dependencies": {
@@ -33,11 +34,6 @@
     "mongodb": "^6.10.0",
     "mongoose": "^8.8.0",
     "multer": "^1.4.5-lts.1",
-    "openai": "^4.71.1",
-<<<<<<< HEAD
-    "zod": "^3.23.8"
-=======
-    "ts-node": "^10.9.2"
->>>>>>> 76ec425b779a3d863687df79187dc44bfc52bbf1
+    "openai": "^4.71.1"
   }
 }
