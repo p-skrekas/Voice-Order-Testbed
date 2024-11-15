@@ -2,7 +2,19 @@ import mongoose, { Model, Schema } from "mongoose";
 import { Settings } from "./settings.interface";
 
 const SettingsSchema = new Schema({
-    systemPrompt: {
+    systemPromptOpenAILarge: {
+        type: String,
+        required: false,
+    },
+    systemPromptOpenAIMini: {
+        type: String,
+        required: false,
+    },
+    systemPromptSonnet: {
+        type: String,
+        required: false,
+    },
+    systemPromptHaiku: {
         type: String,
         required: false,
     },

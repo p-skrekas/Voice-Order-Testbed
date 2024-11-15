@@ -22,8 +22,20 @@ if (process.env.NODE_ENV !== 'production') {
     BACKEND_URL = process.env.REACT_APP_API_ADDRESS || '';
 }
 
-const systemPromptSchema = z.object({
-    systemPrompt: z.string().min(1, { message: "System prompt is required." })
+const openAILargeSchema = z.object({
+    systemPromptOpenAILarge: z.string().min(1, { message: "System prompt is required." })
+});
+
+const openAIMiniSchema = z.object({
+    systemPromptOpenAIMini: z.string().min(1, { message: "System prompt is required." })
+});
+
+const sonnetSchema = z.object({
+    systemPromptSonnet: z.string().min(1, { message: "System prompt is required." })
+});
+
+const haikuSchema = z.object({
+    systemPromptHaiku: z.string().min(1, { message: "System prompt is required." })
 });
 
 const vectorSearchSchema = z.object({
@@ -36,10 +48,31 @@ export default function Settings() {
     const [isUpdating, setIsUpdating] = useState(false);
     const toast = useCustomToast();
 
-    const systemPromptForm = useForm<z.infer<typeof systemPromptSchema>>({
-        resolver: zodResolver(systemPromptSchema),
+    const openAILargeForm = useForm<z.infer<typeof openAILargeSchema>>({
+        resolver: zodResolver(openAILargeSchema),
         defaultValues: {
-            systemPrompt: settings?.systemPrompt || ''
+            systemPromptOpenAILarge: ''
+        }
+    });
+
+    const openAIMiniForm = useForm<z.infer<typeof openAIMiniSchema>>({
+        resolver: zodResolver(openAIMiniSchema),
+        defaultValues: {
+            systemPromptOpenAIMini: ''
+        }
+    });
+
+    const sonnetForm = useForm<z.infer<typeof sonnetSchema>>({
+        resolver: zodResolver(sonnetSchema),
+        defaultValues: {
+            systemPromptSonnet: ''
+        }
+    });
+
+    const haikuForm = useForm<z.infer<typeof haikuSchema>>({
+        resolver: zodResolver(haikuSchema),
+        defaultValues: {
+            systemPromptHaiku: ''
         }
     });
 
@@ -51,19 +84,133 @@ export default function Settings() {
     });
 
     useEffect(() => {
+        if (settings) {
+            openAILargeForm.reset({
+                systemPromptOpenAILarge: settings.systemPromptOpenAILarge || ''
+            });
+            openAIMiniForm.reset({
+                systemPromptOpenAIMini: settings.systemPromptOpenAIMini || ''
+            });
+            sonnetForm.reset({
+                systemPromptSonnet: settings.systemPromptSonnet || ''
+            });
+            haikuForm.reset({
+                systemPromptHaiku: settings.systemPromptHaiku || ''
+            });
+        }
+    }, [settings]);
+
+    useEffect(() => {
         if (settings?.numResultsForVectorSearch) {
             vectorSearchForm.setValue('numProducts', settings.numResultsForVectorSearch.toString());
         }
     }, [settings]);
 
-    async function onUpdateSystemPrompt(values: z.infer<typeof systemPromptSchema>) {
+    async function onUpdateSystemPromptOpenAILarge(values: z.infer<typeof openAILargeSchema>) {
+        try {
+            setIsUpdating(true);
+            console.log('Submitting values:', values);
+            
+            const formattedValues = {
+                systemPromptOpenAILarge: values.systemPromptOpenAILarge.replace(/\n/g, '\n')
+            };
+            
+            console.log('Formatted values:', formattedValues);
+            const response = await fetch(`${BACKEND_URL}/api/settings/system-prompt-openai-large`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(formattedValues)
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Server response:', errorText);
+                throw new Error(`Failed to update system prompt: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            setSettings(data);
+            toast.success('System prompt updated successfully');
+        } catch (error) {
+            console.error('Error details:', error);
+            toast.error('Failed to update system prompt');
+        } finally {
+            setIsUpdating(false);
+        }
+    }
+
+    async function onUpdateSystemPromptOpenAIMini(values: z.infer<typeof openAIMiniSchema>) {
         try {
             setIsUpdating(true);
             const formattedValues = {
-                systemPrompt: values.systemPrompt.replace(/\n/g, '\n')
+                systemPromptOpenAIMini: values.systemPromptOpenAIMini.replace(/\n/g, '\n')
             };
 
-            const response = await fetch(`${BACKEND_URL}/api/settings/system-prompt`, {
+            const response = await fetch(`${BACKEND_URL}/api/settings/system-prompt-openai-mini`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(formattedValues)
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to update system prompt: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            setSettings(data);
+            toast.success('System prompt updated successfully');
+        } catch (error) {
+            console.error(error);
+            toast.error('Failed to update system prompt');
+        } finally {
+            setIsUpdating(false);
+        }
+    }
+
+
+    async function onUpdateSystemPromptSonnet(values: z.infer<typeof sonnetSchema>) {
+        try {
+            setIsUpdating(true);
+            const formattedValues = {
+                systemPromptSonnet: values.systemPromptSonnet.replace(/\n/g, '\n')
+            };
+
+            const response = await fetch(`${BACKEND_URL}/api/settings/system-prompt-sonnet`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(formattedValues)
+            }); 
+
+            if (!response.ok) {
+                throw new Error(`Failed to update system prompt: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            setSettings(data);
+            toast.success('System prompt updated successfully');
+        } catch (error) {
+            console.error(error);
+            toast.error('Failed to update system prompt');
+        } finally {
+            setIsUpdating(false);
+        }
+    }
+
+
+    async function onUpdateSystemPromptHaiku(values: z.infer<typeof haikuSchema>) {
+        try {
+            setIsUpdating(true);
+            const formattedValues = {
+                systemPromptHaiku: values.systemPromptHaiku.replace(/\n/g, '\n')
+            };
+
+            const response = await fetch(`${BACKEND_URL}/api/settings/system-prompt-haiku`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json'
@@ -121,42 +268,116 @@ export default function Settings() {
         fetchSettings();
     }, []);
 
-    const loadCurrentPrompt = () => {
-        if (settings?.systemPrompt) {
-            systemPromptForm.setValue('systemPrompt', settings.systemPrompt);
+    const loadCurrentPromptOpenAILarge = () => {
+        if (settings?.systemPromptOpenAILarge) {
+            openAILargeForm.setValue('systemPromptOpenAILarge', settings.systemPromptOpenAILarge);
+        }
+    };
+
+    const loadCurrentPromptOpenAIMini = () => {
+        if (settings?.systemPromptOpenAIMini) {
+            openAIMiniForm.setValue('systemPromptOpenAIMini', settings.systemPromptOpenAIMini);
+        }
+    };
+
+    const loadCurrentPromptSonnet = () => {
+        if (settings?.systemPromptSonnet) {
+            sonnetForm.setValue('systemPromptSonnet', settings.systemPromptSonnet);
+        }
+    };
+
+    const loadCurrentPromptHaiku = () => {
+        if (settings?.systemPromptHaiku) {
+            haikuForm.setValue('systemPromptHaiku', settings.systemPromptHaiku);
         }
     };
 
     return (
         <div className="flex flex-col h-full w-full p-3">
-            <Tabs defaultValue="system-prompt">
+            <Tabs defaultValue="system-prompt-openai-large">
                 <TabsList>
-                    <TabsTrigger value="system-prompt">System prompt</TabsTrigger>
+                    <TabsTrigger value="system-prompt-openai-large">System prompt - OpenAI Large</TabsTrigger>
+                    <TabsTrigger value="system-prompt-openai-mini">System prompt - OpenAI Mini</TabsTrigger>
+                    <TabsTrigger value="system-prompt-sonnet">System prompt - Sonnet</TabsTrigger>
+                    <TabsTrigger value="system-prompt-haiku">System prompt - Haiku</TabsTrigger>
                     <TabsTrigger value="vector-search">Vector search</TabsTrigger>
                 </TabsList>
-                <TabsContent value="system-prompt">
+                <TabsContent value="system-prompt-openai-large">
                     <div className="flex flex-col gap-3">
                         <Card>
                             <CardHeader>
-                                <CardTitle>Chatbot Settings</CardTitle>
+                                <CardTitle>Chatbot System Prompt Settings - OpenAI Large</CardTitle>
                             </CardHeader>
                             <CardContent className="flex flex-col gap-3">
-
-                                <Form {...systemPromptForm}>
+                                <Form {...openAILargeForm}>
                                     <div className="flex flex-col gap-3">
                                         <span className="text-sm font-bold">
-                                            Current system prompt:
+                                            Current system prompt - OpenAI Large:
                                         </span>
                                         <span className="text-sm whitespace-pre-wrap max-h-[320px] bg-slate-100 overflow-y-auto border rounded p-2">
-                                            {settings?.systemPrompt}
+                                            {settings?.systemPromptOpenAILarge}
                                         </span>
                                     </div>
                                     <form
                                         className="flex flex-col gap-3"
-                                        onSubmit={systemPromptForm.handleSubmit(onUpdateSystemPrompt)}>
+                                        onSubmit={openAILargeForm.handleSubmit(onUpdateSystemPromptOpenAILarge)}>
                                         <FormField
-                                            control={systemPromptForm.control}
-                                            name="systemPrompt"
+                                            control={openAILargeForm.control}
+                                            name="systemPromptOpenAILarge"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Update system prompt</FormLabel>
+                                                    <FormControl>
+                                                        <Textarea {...field} rows={20}/>
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <div className="flex justify-between gap-2">
+                                            <Button type="button" variant="outline" onClick={loadCurrentPromptOpenAILarge}>
+                                                Load current prompt
+                                            </Button>
+                                            <Button type="submit" disabled={isUpdating}>
+                                                {isUpdating ? (
+                                                    <>
+                                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                        Updating...
+                                                    </>
+                                                ) : (
+                                                    "Update system prompt"
+                                                )}
+                                            </Button>
+                                        </div>
+                                    </form>
+                                </Form>
+                            </CardContent>
+                        </Card>
+                    </div>
+                </TabsContent>
+                <TabsContent value="system-prompt-openai-mini">
+                    <div className="flex flex-col gap-3">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Chatbot System Prompt Settings - OpenAI Mini</CardTitle>
+                            </CardHeader>
+                            <CardContent className="flex flex-col gap-3">
+
+                                <Form {...openAIMiniForm}>
+                                    <div className="flex flex-col gap-3">
+                                        <span className="text-sm font-bold">
+                                            Current system prompt - OpenAI Mini:
+                                        </span>
+                                        <span className="text-sm whitespace-pre-wrap max-h-[320px] bg-slate-100 overflow-y-auto border rounded p-2">
+                                            {settings?.systemPromptOpenAIMini}
+                                        </span>
+                                    </div>
+                                    <form
+                                        className="flex flex-col gap-3"
+                                        onSubmit={openAIMiniForm.handleSubmit(onUpdateSystemPromptOpenAIMini)}>
+                                        <FormField
+                                            control={openAIMiniForm.control}
+                                            name="systemPromptOpenAIMini"
                                             render={({ field }) => (
                                                 <FormItem>
                                                     <FormLabel>Update system prompt</FormLabel>
@@ -167,7 +388,113 @@ export default function Settings() {
                                             )}
                                         />
                                         <div className="flex justify-between gap-2">
-                                            <Button type="button" variant="outline" onClick={loadCurrentPrompt}>
+                                            <Button type="button" variant="outline" onClick={loadCurrentPromptOpenAIMini}>
+                                                Load current prompt
+                                            </Button>
+                                            <Button type="submit" disabled={isUpdating}>
+                                                {isUpdating ? (
+                                                    <>
+                                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                        Updating...
+                                                    </>
+                                                ) : (
+                                                    "Update system prompt"
+                                                )}
+                                            </Button>
+                                        </div>
+                                    </form>
+                                </Form>
+                            </CardContent>
+                        </Card>
+                    </div>
+                </TabsContent>
+                <TabsContent value="system-prompt-sonnet">
+                    <div className="flex flex-col gap-3">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Chatbot System Prompt Settings - Sonnet</CardTitle>
+                            </CardHeader>
+                            <CardContent className="flex flex-col gap-3">
+
+                                <Form {...sonnetForm}>
+                                    <div className="flex flex-col gap-3">
+                                        <span className="text-sm font-bold">
+                                            Current system prompt - Sonnet:
+                                        </span>
+                                        <span className="text-sm whitespace-pre-wrap max-h-[320px] bg-slate-100 overflow-y-auto border rounded p-2">
+                                            {settings?.systemPromptSonnet}
+                                        </span>
+                                    </div>
+                                    <form
+                                        className="flex flex-col gap-3"
+                                        onSubmit={sonnetForm.handleSubmit(onUpdateSystemPromptSonnet)}>
+                                        <FormField
+                                            control={sonnetForm.control}
+                                            name="systemPromptSonnet"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Update system prompt</FormLabel>
+                                                    <FormControl>
+                                                        <Textarea {...field} rows={20}/>
+                                                    </FormControl>
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <div className="flex justify-between gap-2">
+                                            <Button type="button" variant="outline" onClick={loadCurrentPromptSonnet}>
+                                                Load current prompt
+                                            </Button>
+                                            <Button type="submit" disabled={isUpdating}>
+                                                {isUpdating ? (
+                                                    <>
+                                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                        Updating...
+                                                    </>
+                                                ) : (
+                                                    "Update system prompt"
+                                                )}
+                                            </Button>
+                                        </div>
+                                    </form>
+                                </Form>
+                            </CardContent>
+                        </Card>
+                    </div>
+                </TabsContent>
+                <TabsContent value="system-prompt-haiku">
+                    <div className="flex flex-col gap-3">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Chatbot System Prompt Settings - Haiku</CardTitle>
+                            </CardHeader>
+                            <CardContent className="flex flex-col gap-3">
+
+                                <Form {...haikuForm}>
+                                    <div className="flex flex-col gap-3">
+                                        <span className="text-sm font-bold">
+                                            Current system prompt - Haiku:
+                                        </span>
+                                        <span className="text-sm whitespace-pre-wrap max-h-[320px] bg-slate-100 overflow-y-auto border rounded p-2">
+                                            {settings?.systemPromptHaiku}
+                                        </span>
+                                    </div>
+                                    <form
+                                        className="flex flex-col gap-3"
+                                        onSubmit={haikuForm.handleSubmit(onUpdateSystemPromptHaiku)}>
+                                        <FormField
+                                            control={haikuForm.control}
+                                            name="systemPromptHaiku"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Update system prompt</FormLabel>
+                                                    <FormControl>
+                                                        <Textarea {...field} rows={20}/>
+                                                    </FormControl>
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <div className="flex justify-between gap-2">
+                                            <Button type="button" variant="outline" onClick={loadCurrentPromptHaiku}>
                                                 Load current prompt
                                             </Button>
                                             <Button type="submit" disabled={isUpdating}>

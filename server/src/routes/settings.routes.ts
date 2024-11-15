@@ -25,17 +25,17 @@ const getSettings: RequestHandler = async (req, res, next) => {
     }
 };
 
-const updateSystemPrompt: RequestHandler = async (req, res, next) => {
+const updateSystemPromptOpenAILarge: RequestHandler = async (req, res, next) => {
     try {
-        const { systemPrompt } = req.body;
+        const { systemPromptOpenAILarge } = req.body;
         
         let settings = await SettingsModel.findOne();
         if (!settings) {
             settings = new SettingsModel({
-                systemPrompt: systemPrompt
+                systemPromptOpenAILarge: systemPromptOpenAILarge
             });
         } else {
-            settings.systemPrompt = systemPrompt;
+            settings.systemPromptOpenAILarge = systemPromptOpenAILarge;
         }
         
         await settings.save();
@@ -46,6 +46,73 @@ const updateSystemPrompt: RequestHandler = async (req, res, next) => {
         next(new HttpError(`Failed to update settings: ${errorMessage}`, 500));
     }
 };
+
+const updateSystemPromptOpenAIMini: RequestHandler = async (req, res, next) => {
+    try {
+        const { systemPromptOpenAIMini } = req.body;
+
+        let settings = await SettingsModel.findOne();
+        if (!settings) {
+            settings = new SettingsModel({
+                systemPromptOpenAIMini: systemPromptOpenAIMini
+            });
+        } else {
+            settings.systemPromptOpenAIMini = systemPromptOpenAIMini;
+        }
+
+        await settings.save();
+        res.status(200).json(settings);
+    } catch (error) {
+        console.error('Update error:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        next(new HttpError(`Failed to update settings: ${errorMessage}`, 500));
+    }
+}
+
+
+const updateSystemPromptSonnet: RequestHandler = async (req, res, next) => {
+    try {
+        const { systemPromptSonnet } = req.body;
+
+        let settings = await SettingsModel.findOne();
+        if (!settings) {
+            settings = new SettingsModel({
+                systemPromptSonnet: systemPromptSonnet
+            });
+        } else {
+            settings.systemPromptSonnet = systemPromptSonnet;
+        }
+
+        await settings.save();
+        res.status(200).json(settings);
+    } catch (error) {
+        console.error('Update error:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        next(new HttpError(`Failed to update settings: ${errorMessage}`, 500));
+    }
+}
+
+const updateSystemPromptHaiku: RequestHandler = async (req, res, next) => {
+    try {
+        const { systemPromptHaiku } = req.body;
+
+        let settings = await SettingsModel.findOne();
+        if (!settings) {
+            settings = new SettingsModel({
+                systemPromptHaiku: systemPromptHaiku
+            });
+        } else {
+            settings.systemPromptHaiku = systemPromptHaiku;
+        }
+
+        await settings.save();
+        res.status(200).json(settings);
+    } catch (error) {
+        console.error('Update error:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        next(new HttpError(`Failed to update settings: ${errorMessage}`, 500));
+    }
+}
 
 const updateVectorSearchSettings: RequestHandler = async (req, res, next) => {
     try {
@@ -70,7 +137,10 @@ const updateVectorSearchSettings: RequestHandler = async (req, res, next) => {
 };
 
 router.get("/", getSettings);
-router.put("/system-prompt", updateSystemPrompt);
+router.put("/system-prompt-openai-large", updateSystemPromptOpenAILarge);
+router.put("/system-prompt-openai-mini", updateSystemPromptOpenAIMini);
+router.put("/system-prompt-sonnet", updateSystemPromptSonnet);
+router.put("/system-prompt-haiku", updateSystemPromptHaiku);
 router.put("/vector-search", updateVectorSearchSettings);
 
 export default router;
