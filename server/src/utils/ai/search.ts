@@ -15,9 +15,7 @@ export async function performVectorSearch(
 
         try {
             queryVector = await getEmbedding(queryText);
-            console.log("Generated query vector:", queryVector);
         } catch (error) {
-            console.error("Error generating embedding:", error);
             throw error;
         }
 
@@ -86,7 +84,6 @@ export async function searchProducts(req: Request, res: Response, next: NextFunc
         }
         
         const searchResults = await performVectorSearch("products", "default", text, limit);
-        console.log("Found ", searchResults.length, " results");
 
 
         res.status(StatusCodes.OK).json(searchResults);

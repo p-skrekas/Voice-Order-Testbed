@@ -31,10 +31,8 @@ export async function performVectorSearch(
         let queryVector: number[] = [];
 
         try {
-            queryVector = await getEmbedding(queryText);
-            console.log("Generated query vector:", queryVector);
+            queryVector = await getEmbedding(queryText)
         } catch (error) {
-            console.error("Error generating embedding:", error);
             throw error;
         }
 
@@ -69,7 +67,6 @@ export async function performVectorSearch(
         return results;
 
     } catch (error) {
-        console.error("Error performing vector search:", error);
         throw new HttpError("Could not perform search", StatusCodes.INTERNAL_SERVER_ERROR);
     }
 }
@@ -84,7 +81,6 @@ const getRandomProducts = async (db: Db): Promise<string[]> => {
         return products.map(product => product.name);
         
     } catch (error) {
-        console.error('Error fetching random products:', error);
         throw error;
     }
 };
@@ -111,9 +107,6 @@ export async function searchProducts(req: Request, res: Response, next: NextFunc
         }
         
         const searchResults = await performVectorSearch("products", "default", text, limit);
-        console.log("Found ", searchResults.length, " results");
-
-
         res.status(StatusCodes.OK).json(searchResults);
 
     } catch (error) {
@@ -133,8 +126,6 @@ export async function searchProducts(req: Request, res: Response, next: NextFunc
 
 
 export async function createFakeOrder(req: Request, res: Response, next: NextFunction) {
-
-    console.log("Creating fake order");
     try{ 
         const { productList, numberOfItems } = req.body;
 
@@ -145,15 +136,9 @@ export async function createFakeOrder(req: Request, res: Response, next: NextFun
         }
         const randomProducts = await getRandomProducts(mongoose.connection.db);
 
-  
-
-
         if (!randomProducts || randomProducts.length === 0) {
             throw new HttpError("No products found in database", 404);
         }
-        
-
-
 
         const order = await openai.chat.completions.create({
             model: "gpt-4o-2024-08-06",
@@ -187,7 +172,6 @@ export async function createFakeOrder(req: Request, res: Response, next: NextFun
                 }
             ],
         });
-
 
         res.status(200).json({ order: order.choices[0].message.content, products: randomProducts });
 

@@ -5,14 +5,9 @@ import { performVectorSearch } from "../utils/ai/search";
 
 const router = Router();
 
-type GetOpenAIResponseRequest = Request & {
-    messages: { role: string, content: string, tool_call_id?: string, name?: string }[];
-    llm: string;
-    query: string;
-}
 
 
-
+// Function to compute the cost of the response for all models
 const computeCost = (llm: string, data: any) => {
     let input_tokens_cost = 0;
     let output_tokens_cost = 0;
@@ -23,13 +18,31 @@ const computeCost = (llm: string, data: any) => {
     } else if (llm === "gpt-4o-2024-08-06") {
         input_tokens_cost = 2.5 / 1000000;
         output_tokens_cost = 10 / 1000000;
+    } else if (llm === "claude-3-5-sonnet-20241022") {
+        input_tokens_cost = 3.0 / 1000000;
+        output_tokens_cost = 15 / 1000000;
+    } else if (llm === "claude-3-5-haiku-20241022") {
+        input_tokens_cost = 1 / 1000000;
+        output_tokens_cost = 5 / 1000000;
     }
 
     return (data.usage.prompt_tokens * input_tokens_cost) + (data.usage.completion_tokens * output_tokens_cost);
 }
 
 
+// ------------------------------------------
+// ---               OPENAI               ---
+// ------------------------------------------
 
+// Request type for OpenAI
+type GetOpenAIResponseRequest = Request & {
+    messages: { role: string, content: string, tool_call_id?: string, name?: string }[];
+    llm: string;
+    query: string;
+}
+
+
+// Response schema for OpenAI
 const responseSchema = {
     type: "json_schema",
     json_schema: {
@@ -37,53 +50,56 @@ const responseSchema = {
         schema: {
             type: "object",
             properties: {
-                steps: {
+                response: {
+                    type: "string",
+                    description: "The final response from the assistant"
+                },
+                order: {
                     type: "array",
                     items: {
                         type: "object",
                         properties: {
-                            explanation: { type: "string" },
-                            output: { type: "string" }
+                            productId: { 
+                                type: "string",
+                                description: "The id of the product"
+                            },
+                            productName: {
+                                type: "string",
+                                description: "The name of the product"
+                            },
+                            productDescription: {
+                                type: "string",
+                                description: "The description of the product"
+                            },
+                            productPrice: { type: "number" }
                         },
-                        required: ["explanation", "output"],
+                        required: ["productId", "productName", "productDescription", "productPrice"],
                         additionalProperties: false
                     }
-                },
-                final_answer: { type: "string" },
-                order_status: {
-                    type: "object",
-                    properties: {
-                        status: { type: "string" },
-                        details: { type: "string" }
-                    },
-                    required: ["status", "details"],
-                    additionalProperties: false
                 }
             },
-            required: ["steps", "final_answer", "order_status"],
+            required: ["response", "order"],
             additionalProperties: false
         },
         strict: true
     }
 };
 
+// Function to get the response from OpenAI
 const getOpenAIResponse = async (req: GetOpenAIResponseRequest, res: Response, next: NextFunction) => {
-    const startTime = Date.now();
+
     try {
         let cleanedProducts: any[] = [];
 
-        const { messages, llm, query } = req.body as GetOpenAIResponseRequest;
+        const { llm, query, messages } = req.body as GetOpenAIResponseRequest;
 
-        // Add model name to response
-        const modelName = llm === "gpt-4o-mini-2024-07-18" ? "GPT-4o Mini" :
-            llm === "gpt-4o-2024-08-06" ? "GPT-4o" :
-                llm === "gpt-4o-sonnet" ? "GPT-4o Sonnet" :
-                    "GPT-4o Haiku";
 
+        if (messages.length === 0) {
+            return res.status(400).json({ error: 'No messages provided' });
+        }
 
         const settings = await SettingsModel.findOne();
 
-        console.log('--- SETTINGS: ', settings);
         if (!settings) {
             return res.status(400).json({ error: 'Settings not found' });
         }
@@ -107,13 +123,7 @@ const getOpenAIResponse = async (req: GetOpenAIResponseRequest, res: Response, n
             });
         }
 
-        // Add user message
-        messages.push({
-            role: "user",
-            content: query
-        });
-
-
+        const startTime = Date.now();
         // Get response from OpenAI
         const response = await fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
@@ -129,7 +139,6 @@ const getOpenAIResponse = async (req: GetOpenAIResponseRequest, res: Response, n
                 response_format: responseSchema
             })
         });
-
 
         const data = await response.json();
 
@@ -185,7 +194,7 @@ const getOpenAIResponse = async (req: GetOpenAIResponseRequest, res: Response, n
                 cost: cost,
                 products: JSON.stringify(cleanedProducts),
                 responseTime,
-                modelName,
+                llm,
                 orderStatus: dataWithTools.choices[0].message.content.order_status
             });
         }
@@ -196,6 +205,8 @@ const getOpenAIResponse = async (req: GetOpenAIResponseRequest, res: Response, n
         }
 
         const responseMessage = data.choices[0].message.content;
+
+        console.log('Response message: \n', responseMessage);
 
         if (!responseMessage) {
             return res.status(400).json({ error: 'No response from OpenAI' });
@@ -217,7 +228,7 @@ const getOpenAIResponse = async (req: GetOpenAIResponseRequest, res: Response, n
             cost: cost,
             products: JSON.stringify(cleanedProducts),
             responseTime,
-            modelName,
+            llm,
             orderStatus: data.choices[0].message.content.order_status
         });
     } catch (error) {
@@ -225,6 +236,12 @@ const getOpenAIResponse = async (req: GetOpenAIResponseRequest, res: Response, n
     }
 };
 
+
+// ------------------------------------------
+// ---             ANTHROPIC              ---
+// ------------------------------------------
+
+// Function to handle errors from Anthropic
 const handleAnthropicError = (error: any, res: Response, next: NextFunction) => {
 
     console.error("Anthropic API Error:", error);
@@ -242,12 +259,14 @@ const handleAnthropicError = (error: any, res: Response, next: NextFunction) => 
 };
 
 
+// Type for tool content in Anthropic
 type toolContentanthropic = {
     type: string;
     tool_use_id: string;
     content: string;
 }
 
+// Type for messages in Anthropic
 interface AnthropicMessage {
     role: string;
     content: string | toolContentanthropic[];
@@ -261,12 +280,16 @@ type GetAnthropicResponseRequest = Request & {
     query: string;
 }
 
+// Function to create a message for Anthropic
 const createAnthropicAPIMessage = async (
-    llm: string, 
-    systemPrompt: string, 
-    messages: AnthropicMessage[], 
+    llm: string,
+    systemPrompt: string,
+    messages: AnthropicMessage[],
     tools: any[]
 ) => {
+    console.log('Messages: \n', messages);
+    console.log('llm: \n', llm);
+
     const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
@@ -277,17 +300,25 @@ const createAnthropicAPIMessage = async (
         body: JSON.stringify({
             model: llm,
             system: systemPrompt,
-            messages: messages,
+            messages: messages.map(msg => ({
+                role: msg.role,
+                content: typeof msg.content === 'string' ? msg.content : msg.content
+            })),
             tools: tools,
             max_tokens: 4096,
             temperature: 0
         })
     });
-    console.log('Anthropic response: \n', response);
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Anthropic API error: ${response.status} - ${errorText}`);
+    }
+
     return response;
 }
 
-
+// Function to get the response from Anthropic
 const getResponseAnthropic = async (req: Request, res: Response, next: NextFunction) => {
     const { messages, llm, query } = req.body as GetAnthropicResponseRequest;
     const settings = await SettingsModel.findOne();
@@ -305,16 +336,9 @@ const getResponseAnthropic = async (req: Request, res: Response, next: NextFunct
     try {
         let currentMessages: AnthropicMessage[] = [...messages];
 
-        currentMessages.push({
-            role: "user",
-            content: query
-        });
-
         const startTime = Date.now();
         let response = await createAnthropicAPIMessage(llm, systemPrompt, currentMessages, toolsAnthropic);
         let data = await response.json();
-
-        console.log('Anthropic response: \n', data);
 
         currentMessages.push({
             role: "assistant",
@@ -328,7 +352,7 @@ const getResponseAnthropic = async (req: Request, res: Response, next: NextFunct
                 if (contentBlock.type === "tool_use") {
                     const toolUseId = contentBlock.id;
                     let result;
-                    
+
                     switch (contentBlock.name) {
                         case "searchProducts":
                             result = await performVectorSearch("products", "default", query, 20);
@@ -354,7 +378,9 @@ const getResponseAnthropic = async (req: Request, res: Response, next: NextFunct
 
             response = await createAnthropicAPIMessage(llm, systemPrompt, currentMessages, toolsAnthropic);
             const newData = await response.json();
-            
+
+
+
             if (newData.content) {
                 currentMessages.push({
                     role: "assistant",
@@ -381,10 +407,12 @@ const getResponseAnthropic = async (req: Request, res: Response, next: NextFunct
 
         console.log('Response message: \n', responseMessage);
 
+
+
         return res.status(200).json({
-            aiResponse: data.content,
+            response: responseMessage,
             messages: currentMessages,
-            responseTime
+            responseTime,
         });
     } catch (error) {
         handleAnthropicError(error, res, next);
@@ -392,7 +420,7 @@ const getResponseAnthropic = async (req: Request, res: Response, next: NextFunct
 }
 
 
-
+// Routes
 router.post("/getOpenAIResponse", getOpenAIResponse as express.RequestHandler);
 router.post("/getAnthropicResponse", getResponseAnthropic as express.RequestHandler);
 

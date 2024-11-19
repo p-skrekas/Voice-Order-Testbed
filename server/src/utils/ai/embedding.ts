@@ -12,7 +12,6 @@ const openaiClient = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY
 });
 
-
 export async function getEmbedding(text: string): Promise<number[]> {
     try {
         const response = await openaiClient.embeddings.create({
@@ -21,7 +20,6 @@ export async function getEmbedding(text: string): Promise<number[]> {
         });
         return response.data[0].embedding;
     } catch (error) {
-        console.error("Error generating embedding:", error);
         throw new HttpError("Failed to generate embedding", 500);
     }
 }

@@ -32,10 +32,13 @@ if (process.env.NODE_ENV !== 'production') {
 
 
 export default function Chat() {
-    const [messages, setMessages] = useState<Message[]>([]);
+    const [messagesOpenAILarge, setMessagesOpenAILarge] = useState<Message[]>([]);
+    const [messagesOpenAIMini, setMessagesOpenAIMini] = useState<Message[]>([]);
+    const [messagesAnthropicLarge, setMessagesAnthropicLarge] = useState<Message[]>([]);
+    const [messagesAnthropicMini, setMessagesAnthropicMini] = useState<Message[]>([]);
+
     const [displayMessages, setDisplayMessages] = useState<Message[]>([]);
     const [inputMessage, setInputMessage] = useState('');
-    const [llm, setLlm] = useState("");
     const [isTyping, setIsTyping] = useState(false);
     const [currentModel, setCurrentModel] = useState<string>("");
 
@@ -71,6 +74,39 @@ export default function Chat() {
         return responseOpenAIMini;
     }
 
+
+    const getAnthropicResponseLarge = async (query: string, messages: Message[]) => {
+        const responseAnthropic = await fetch(`${BACKEND_URL}/api/chat/getAnthropicResponse`, {
+            method: "POST",
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                llm: "claude-3-5-sonnet-20241022",
+                query: query,
+                messages: messages
+            }),
+        });
+
+        return responseAnthropic;
+    }
+
+    const getAnthropicResponseMini = async (query: string, messages: Message[]) => {
+        const responseAnthropic = await fetch(`${BACKEND_URL}/api/chat/getAnthropicResponse`, {
+            method: "POST",
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                llm: "claude-3-5-haiku-20241022",
+                query: query,
+                messages: messages
+            }),
+        });
+
+        return responseAnthropic;
+    }
+
     const handleSendMessage = async (e: React.FormEvent) => {
         setIsTyping(true);
         e.preventDefault();
@@ -85,119 +121,116 @@ export default function Chat() {
             cost: 0 
         };
         
-        setMessages([...messages, userMessage]);
+        setMessagesOpenAILarge([...messagesOpenAILarge, userMessage]);
+        setMessagesOpenAIMini([...messagesOpenAIMini, userMessage]);
+        setMessagesAnthropicLarge([...messagesAnthropicLarge, userMessage]);
+        setMessagesAnthropicMini([...messagesAnthropicMini, userMessage]);
         setDisplayMessages([...displayMessages, userMessage]);
         setInputMessage('');
+
+
 
         try {
             // Update status for large model
             setCurrentModel("Getting response from GPT-4o");
-            const responseOpenAILarge = await getOpenAIResponseLarge(inputMessage.trim(), [...messages, userMessage]);
+            const responseOpenAILarge = await getOpenAIResponseLarge(inputMessage.trim(), [...messagesOpenAILarge, userMessage]);
 
-            
             // Update status for mini model
             setCurrentModel("Getting response from GPT-4o Mini");
-            const responseOpenAIMini = await getOpenAIResponseMini(inputMessage.trim(), [...messages, userMessage]);
+            const responseOpenAIMini = await getOpenAIResponseMini(inputMessage.trim(), [...messagesOpenAIMini, userMessage]);
 
+            // Update status for Anthropic large model
+            setCurrentModel("Getting response from Claude 3.5 Sonnet");
+            const responseAnthropic = await getAnthropicResponseLarge(inputMessage.trim(), [...messagesAnthropicLarge, userMessage]);
+
+            // Update status for Anthropic mini model
+            setCurrentModel("Getting response from Claude 3.5 Haiku");
+            const responseAnthropicMini = await getAnthropicResponseMini(inputMessage.trim(), [...messagesAnthropicMini, userMessage]);
+
+            // Parse responses
             const dataOpenAILarge = await responseOpenAILarge.json();
             const dataOpenAIMini = await responseOpenAIMini.json();
-            
-            // Parse responses
-            const aiResponseMatchOpenAILarge = dataOpenAILarge.aiResponse.match(/<AiResponse>([^]*?)<\/AiResponse>/);
-            const parsedResponseOpenAILarge = aiResponseMatchOpenAILarge ? aiResponseMatchOpenAILarge[1] : dataOpenAILarge.aiResponse;
+            const dataAnthropic = await responseAnthropic.json();
+            const dataAnthropicMini = await responseAnthropicMini.json();
 
-            const aiResponseMatchOpenAIMini = dataOpenAIMini.aiResponse.match(/<AiResponse>([^]*?)<\/AiResponse>/);
-            const parsedResponseOpenAIMini = aiResponseMatchOpenAIMini ? aiResponseMatchOpenAIMini[1] : dataOpenAIMini.aiResponse;
+            // Extract the response content - handle both JSON string and parsed object cases
+            const aiResponseMatchOpenAILarge = typeof dataOpenAILarge.aiResponse === 'string' 
+                ? JSON.parse(dataOpenAILarge.aiResponse).response 
+                : dataOpenAILarge.aiResponse.response;
 
-            // Parse orders for both models
-            let orderOpenAILarge = [];
-            const orderMatchOpenAILarge = dataOpenAILarge.aiResponse.match(/<Order>([^]*?)<\/Order>/);
-            if (orderMatchOpenAILarge) {
-                const productMatches = orderMatchOpenAILarge[1].matchAll(/<product>[^]*?<productId>\s*([^]*?)\s*<\/productId>[^]*?<productName>\s*([^]*?)\s*<\/productName>[^]*?<quantity>\s*([^]*?)\s*<\/quantity>[^]*?<\/product>/g);
-                for (const match of productMatches) {
-                    orderOpenAILarge.push({
-                        productId: match[1].trim(),
-                        productName: match[2].trim(),
-                        quantity: parseInt(match[3].trim())
-                    });
-                }
-            }
+            const aiResponseMatchOpenAIMini = typeof dataOpenAIMini.aiResponse === 'string' 
+                ? JSON.parse(dataOpenAIMini.aiResponse).response 
+                : dataOpenAIMini.aiResponse.response;
 
-            let orderOpenAIMini = [];
-            const orderMatchOpenAIMini = dataOpenAIMini.aiResponse.match(/<Order>([^]*?)<\/Order>/);
-            if (orderMatchOpenAIMini) {
-                const productMatches = orderMatchOpenAIMini[1].matchAll(/<product>[^]*?<productId>\s*([^]*?)\s*<\/productId>[^]*?<productName>\s*([^]*?)\s*<\/productName>[^]*?<quantity>\s*([^]*?)\s*<\/quantity>[^]*?<\/product>/g);
-                for (const match of productMatches) {
-                    orderOpenAIMini.push({
-                        productId: match[1].trim(),
-                        productName: match[2].trim(),
-                        quantity: parseInt(match[3].trim())
-                    });
-                }
-            }
+            const aiResponseAnthropicLarge = dataAnthropic.response;
+            const aiResponseAnthropicMini = dataAnthropicMini.response;
 
-            console.log('orderOpenAILarge', orderOpenAILarge);
-            console.log('orderOpenAIMini', orderOpenAIMini);
-
-            
-            let productsOpenAILarge = [];
-            if (dataOpenAILarge.products) {
-                try {
-                    productsOpenAILarge = typeof dataOpenAILarge.products === 'string' ? JSON.parse(dataOpenAILarge.products) : dataOpenAILarge.products;
-                } catch (e) {
-                    console.error("Error parsing products:", e);
-                    productsOpenAILarge = [];
-                }
-            }
-
-            let productsOpenAIMini = [];
-            if (dataOpenAIMini.products) {
-                try {
-                    productsOpenAIMini = typeof dataOpenAIMini.products === 'string' ? JSON.parse(dataOpenAIMini.products) : dataOpenAIMini.products;
-                } catch (e) {
-                    console.error("Error parsing products:", e);
-                    productsOpenAIMini = [];
-                }
-            }
-
-            // Update messages state with only the Large model response (for context preservation)
-            setMessages([...messages, userMessage, { 
+            // Update messages states
+            setMessagesAnthropicLarge([...messagesAnthropicLarge, userMessage, { 
                 role: "assistant", 
-                content: parsedResponseOpenAILarge, 
-                promptTokens: 0, 
-                completionTokens: 0, 
-                totalTokens: 0, 
-                cost: dataOpenAILarge.cost,
-                responseTime: dataOpenAILarge.responseTime,
-                products: productsOpenAILarge,
-                order: orderOpenAILarge
+                content: aiResponseAnthropicLarge, 
+                promptTokens: dataAnthropic.promptTokens, 
+                completionTokens: dataAnthropic.completionTokens, 
+                totalTokens: dataAnthropic.totalTokens, 
+                cost: dataAnthropic.cost,
+                responseTime: dataAnthropic.responseTime,
+            }]);
+
+            setMessagesAnthropicMini([...messagesAnthropicMini, userMessage, { 
+                role: "assistant", 
+                content: aiResponseAnthropicMini, 
+                promptTokens: dataAnthropicMini.promptTokens, 
+                completionTokens: dataAnthropicMini.completionTokens, 
+                totalTokens: dataAnthropicMini.totalTokens, 
+                cost: dataAnthropicMini.cost,
+                responseTime: dataAnthropicMini.responseTime,
             }]);
 
             // Update display messages with both responses
             setDisplayMessages([...displayMessages, userMessage, 
                 { 
                     role: "assistant", 
-                    content: parsedResponseOpenAILarge,
+                    content: aiResponseMatchOpenAILarge,
                     promptTokens: dataOpenAILarge.promptTokens, 
                     completionTokens: dataOpenAILarge.completionTokens, 
                     totalTokens: dataOpenAILarge.totalTokens, 
                     cost: dataOpenAILarge.cost,
                     responseTime: dataOpenAILarge.responseTime,
-                    products: productsOpenAILarge,
-                    order: orderOpenAILarge,
+                    // products: productsOpenAILarge,
+                    // order: orderOpenAILarge,
                     modelName: "GPT-4"
                 },
                 { 
                     role: "assistant", 
-                    content: parsedResponseOpenAIMini,
+                    content: aiResponseMatchOpenAIMini,
                     promptTokens: dataOpenAIMini.promptTokens, 
                     completionTokens: dataOpenAIMini.completionTokens, 
                     totalTokens: dataOpenAIMini.totalTokens, 
                     cost: dataOpenAIMini.cost,
                     responseTime: dataOpenAIMini.responseTime,
-                    products: productsOpenAIMini,
-                    order: orderOpenAIMini,
+                    // products: productsOpenAIMini,
+                    // order: orderOpenAIMini,
                     modelName: "GPT-4 Mini"
+                },
+                {
+                    role: "assistant",
+                    content: aiResponseAnthropicLarge,
+                    promptTokens: dataAnthropic.promptTokens,
+                    completionTokens: dataAnthropic.completionTokens,
+                    totalTokens: dataAnthropic.totalTokens,
+                    cost: dataAnthropic.cost,
+                    responseTime: dataAnthropic.responseTime,
+                    modelName: "Claude 3.5 Sonnet"
+                },
+                {
+                    role: "assistant",
+                    content: aiResponseAnthropicMini,
+                    promptTokens: dataAnthropicMini.promptTokens,
+                    completionTokens: dataAnthropicMini.completionTokens,
+                    totalTokens: dataAnthropicMini.totalTokens,
+                    cost: dataAnthropicMini.cost,
+                    responseTime: dataAnthropicMini.responseTime,
+                    modelName: "Claude 3.5 Haiku"
                 }
             ]);
 
@@ -241,6 +274,7 @@ export default function Chat() {
                                         <div className="flex flex-col text-sm w-full">
                                             <Card className="border-gray-200">
                                                 <CardContent className="p-3">
+                                                    {/* First row: OpenAI responses */}
                                                     <div className="flex gap-6">
                                                         <div className="flex-1 p-3">
                                                             <div className="font-semibold mb-2 flex justify-between items-center">
@@ -364,39 +398,57 @@ export default function Chat() {
                                                             </div>
                                                         )}
                                                     </div>
-                                                    {/* Products and Order buttons */}
-                                                    {message.products && message.products.length > 0 && (
-                                                        <div className="mt-4">
-                                                            <Dialog>
-                                                                <DialogTrigger asChild>
-                                                                    <Button variant="outline" size="sm">
-                                                                        <Barcode size={20} />
-                                                                    </Button>
-                                                                </DialogTrigger>
-                                                                <DialogContent className="max-h-[80vh] flex flex-col gap-4">
-                                                                    <DialogHeader>
-                                                                        <DialogTitle>Fetched Products (MongoDB)</DialogTitle>
-                                                                        <DialogDescription>
-                                                                            List of products found in the database matching your query.
-                                                                        </DialogDescription>
-                                                                    </DialogHeader>
-                                                                    <div className="grid gap-4 overflow-y-auto max-h-[60vh] pr-2">
-                                                                        {message.products.map((product, idx) => (
-                                                                            <div key={idx} className="p-2 border rounded">
-                                                                                <div className="font-medium">{product.name}</div>
-                                                                                <div className="text-sm text-gray-500">
-                                                                                    Unit: {product.unit2_desc} ({product.units_per_package} {product.main_unit_desc})
-                                                                                </div>
-                                                                            </div>
-                                                                        ))}
-                                                                    </div>
-                                                                    <DialogFooter className="mt-4">
-                                                                        <DialogTrigger asChild>
-                                                                            <Button variant="destructive">Close</Button>
-                                                                        </DialogTrigger>
-                                                                    </DialogFooter>
-                                                                </DialogContent>
-                                                            </Dialog>
+                                                    
+                                                    {/* Second row: Anthropic responses */}
+                                                    {index + 3 < displayMessages.length && 
+                                                     displayMessages[index + 2]?.role === 'assistant' && 
+                                                     displayMessages[index + 3]?.role === 'assistant' && (
+                                                        <div className="flex gap-6 mt-6 pt-6 border-t">
+                                                            {/* Anthropic Sonnet */}
+                                                            <div className="flex-1 p-3">
+                                                                <div className="font-semibold mb-2 flex justify-between items-center">
+                                                                    <span>Claude 3.5 Sonnet</span>
+                                                                    {displayMessages[index + 2]?.responseTime && (
+                                                                        <span className="flex flex-row gap-1 text-xs text-gray-500">
+                                                                            <Timer size={16} /> {displayMessages[index + 2].responseTime}ms
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                                <div className="rounded-lg p-3 bg-gray-200 text-gray-800">
+                                                                    <div className="flex-1">{displayMessages[index + 2]?.content}</div>
+                                                                </div>
+                                                                {/* Cost display with null check */}
+                                                                <div className="mt-1 flex justify-between items-center text-xs text-gray-500">
+                                                                    {displayMessages[index + 2]?.cost != null && (
+                                                                        <span className="flex flex-row gap-1 text-xs text-gray-500">
+                                                                            <Banknote size={16} /> ${Number(displayMessages[index + 2].cost).toFixed(6)}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Anthropic Haiku */}
+                                                            <div className="flex-1 p-3">
+                                                                <div className="font-semibold mb-2 flex justify-between items-center">
+                                                                    <span>Claude 3.5 Haiku</span>
+                                                                    {displayMessages[index + 3]?.responseTime && (
+                                                                        <span className="flex flex-row gap-1 text-xs text-gray-500">
+                                                                            <Timer size={16} /> {displayMessages[index + 3].responseTime}ms
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                                <div className="rounded-lg p-3 bg-gray-200 text-gray-800">
+                                                                    <div className="flex-1">{displayMessages[index + 3]?.content}</div>
+                                                                </div>
+                                                                {/* Cost display with null check */}
+                                                                <div className="mt-1 flex justify-between items-center text-xs text-gray-500">
+                                                                    {displayMessages[index + 3]?.cost != null && (
+                                                                        <span className="flex flex-row gap-1 text-xs text-gray-500">
+                                                                            <Banknote size={16} /> ${Number(displayMessages[index + 3].cost).toFixed(6)}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            </div>
                                                         </div>
                                                     )}
                                                 </CardContent>
