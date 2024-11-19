@@ -1,4 +1,4 @@
-export const tools = [
+export const toolsOpenAI = [
     {
         type: "function",
         function: {
@@ -14,4 +14,24 @@ export const tools = [
             }
         }
     }
+]
+
+
+
+export const toolsAnthropic = [
+    {
+        name: "searchProducts",
+        description: "Search for products in the database",
+        input_schema: {
+            type: "object",
+            properties: {
+                query: { 
+                    type: "string",
+                    description: "The query to search for"
+                },
+            },
+            required: ["query"]
+        }
+    }
+
 ]
