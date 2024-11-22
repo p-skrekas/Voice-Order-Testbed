@@ -8,7 +8,8 @@ export async function performVectorSearch(
     collectionName: string,
     indexName: string,
     queryText: string, 
-    limit: number 
+    limit: number,
+    productIds: string[]
 ): Promise<any[]> {
     try {
         let queryVector: number[] = [];
@@ -25,17 +26,18 @@ export async function performVectorSearch(
 
         const results = await mongoose.connection.db.collection(collectionName).aggregate([
             {
+                $match: {
+                    id: { $in: productIds },
+                    published: true
+                }
+            },
+            {
                 $vectorSearch: {
                     index: indexName,
                     queryVector: queryVector,
                     path: "embedding",
                     numCandidates: 10000,
                     limit: limit
-                }
-            },
-            {
-                $match: {
-                    published: true
                 }
             },
             {
@@ -66,6 +68,7 @@ export async function performVectorSearch(
 type SearchRequest = {
     text: string;
     limit: number;
+    productIds: string[];
 }
 
 
@@ -77,13 +80,17 @@ export async function searchProducts(req: Request, res: Response, next: NextFunc
             throw new HttpError("Invalid request body", 400);
         }
 
-        const { text, limit }= req.body as SearchRequest;
+        const { text, limit, productIds } = req.body as SearchRequest;
         
         if (!text || typeof text !== 'string') {
             throw new HttpError("Invalid search query. Please provide a text string.", 400);
         }
         
-        const searchResults = await performVectorSearch("products", "default", text, limit);
+        if (!Array.isArray(productIds)) {
+            throw new HttpError("Product IDs must be provided as an array", 400);
+        }
+        
+        const searchResults = await performVectorSearch("products", "default", text, limit, productIds);
 
 
         res.status(StatusCodes.OK).json(searchResults);
