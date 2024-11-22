@@ -336,6 +336,11 @@ const getResponseAnthropic = async (req: Request, res: Response, next: NextFunct
     try {
         let currentMessages: AnthropicMessage[] = [...messages];
 
+        currentMessages.push({
+            role: "user",
+            content: query
+        });
+
         const startTime = Date.now();
         let response = await createAnthropicAPIMessage(llm, systemPrompt, currentMessages, toolsAnthropic);
         let data = await response.json();
@@ -345,9 +350,12 @@ const getResponseAnthropic = async (req: Request, res: Response, next: NextFunct
             content: data.content
         });
 
+
+
         while (data.stop_reason === "tool_use") {
             const toolResults: toolContentanthropic[] = [];
 
+            console.log('Content blocks: \n', data.content);
             for (const contentBlock of data.content) {
                 if (contentBlock.type === "tool_use") {
                     const toolUseId = contentBlock.id;

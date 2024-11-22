@@ -9,7 +9,6 @@ export async function performVectorSearch(
     indexName: string,
     queryText: string, 
     limit: number,
-    productIds: string[]
 ): Promise<any[]> {
     try {
         let queryVector: number[] = [];
@@ -25,12 +24,6 @@ export async function performVectorSearch(
         }
 
         const results = await mongoose.connection.db.collection(collectionName).aggregate([
-            {
-                $match: {
-                    id: { $in: productIds },
-                    published: true
-                }
-            },
             {
                 $vectorSearch: {
                     index: indexName,
@@ -90,7 +83,7 @@ export async function searchProducts(req: Request, res: Response, next: NextFunc
             throw new HttpError("Product IDs must be provided as an array", 400);
         }
         
-        const searchResults = await performVectorSearch("products", "default", text, limit, productIds);
+        const searchResults = await performVectorSearch("products", "default", text, limit,);
 
 
         res.status(StatusCodes.OK).json(searchResults);
