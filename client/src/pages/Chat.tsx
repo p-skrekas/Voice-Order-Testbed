@@ -13,13 +13,14 @@ interface Message {
     totalTokens: number;
     cost: number;
     responseTime?: number;
-    products?: any[];
     order?: {
-        productId: string;
-        productName: string;
+        id: number;
+        name: string;
         quantity: number;
+        unit: string;
     }[];
     modelName?: string;
+    orderStatus?: string;
 }
 
 
@@ -32,8 +33,6 @@ if (process.env.NODE_ENV !== 'production') {
 
 
 export default function Chat() {
-    const [messagesOpenAILarge, setMessagesOpenAILarge] = useState<Message[]>([]);
-    const [messagesOpenAIMini, setMessagesOpenAIMini] = useState<Message[]>([]);
     const [messagesAnthropicLarge, setMessagesAnthropicLarge] = useState<Message[]>([]);
     const [messagesAnthropicMini, setMessagesAnthropicMini] = useState<Message[]>([]);
 
@@ -42,37 +41,6 @@ export default function Chat() {
     const [isTyping, setIsTyping] = useState(false);
     const [currentModel, setCurrentModel] = useState<string>("");
 
-    const getOpenAIResponseLarge = async (query: string, messages: Message[]) => {
-        const responseOpenAILarge = await fetch(`${BACKEND_URL}/api/chat/getOpenAIResponse`, {
-            method: "POST",
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                llm: "gpt-4o-2024-08-06",
-                query: query,
-                messages: messages
-            }),
-        });
-
-        return responseOpenAILarge;
-    }
-
-    const getOpenAIResponseMini = async (query: string, messages: Message[]) => {
-        const responseOpenAIMini = await fetch(`${BACKEND_URL}/api/chat/getOpenAIResponse`, {
-            method: "POST",
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                llm: "gpt-4o-mini-2024-07-18",
-                query: query,
-                messages: messages
-            }),
-        });
-
-        return responseOpenAIMini;
-    }
 
 
     const getAnthropicResponseLarge = async (query: string, messages: Message[]) => {
@@ -121,8 +89,6 @@ export default function Chat() {
             cost: 0 
         };
         
-        setMessagesOpenAILarge([...messagesOpenAILarge, userMessage]);
-        setMessagesOpenAIMini([...messagesOpenAIMini, userMessage]);
         setMessagesAnthropicLarge([...messagesAnthropicLarge, userMessage]);
         setMessagesAnthropicMini([...messagesAnthropicMini, userMessage]);
         setDisplayMessages([...displayMessages, userMessage]);
@@ -131,13 +97,6 @@ export default function Chat() {
 
 
         try {
-            // Update status for large model
-            setCurrentModel("Getting response from GPT-4o");
-            const responseOpenAILarge = await getOpenAIResponseLarge(inputMessage.trim(), [...messagesOpenAILarge, userMessage]);
-
-            // Update status for mini model
-            setCurrentModel("Getting response from GPT-4o Mini");
-            const responseOpenAIMini = await getOpenAIResponseMini(inputMessage.trim(), [...messagesOpenAIMini, userMessage]);
 
             // Update status for Anthropic large model
             setCurrentModel("Getting response from Claude 3.5 Sonnet");
@@ -147,95 +106,80 @@ export default function Chat() {
             setCurrentModel("Getting response from Claude 3.5 Haiku");
             const responseAnthropicMini = await getAnthropicResponseMini(inputMessage.trim(), [...messagesAnthropicMini, userMessage]);
 
-            // Parse responses
-            const dataOpenAILarge = await responseOpenAILarge.json();
-            const dataOpenAIMini = await responseOpenAIMini.json();
-            const dataAnthropic = await responseAnthropic.json();
+            const dataAnthropicLarge = await responseAnthropic.json();
             const dataAnthropicMini = await responseAnthropicMini.json();
 
-            // Extract the response content - handle both JSON string and parsed object cases
-            const aiResponseMatchOpenAILarge = typeof dataOpenAILarge.aiResponse === 'string' 
-                ? JSON.parse(dataOpenAILarge.aiResponse).response 
-                : dataOpenAILarge.aiResponse.response;
+            console.log(dataAnthropicLarge);
+            console.log(dataAnthropicMini);
 
-            const aiResponseMatchOpenAIMini = typeof dataOpenAIMini.aiResponse === 'string' 
-                ? JSON.parse(dataOpenAIMini.aiResponse).response 
-                : dataOpenAIMini.aiResponse.response;
 
-            const aiResponseAnthropicLarge = dataAnthropic.response;
+
+
+            const aiResponseAnthropicLarge = dataAnthropicLarge.response;
             const aiResponseAnthropicMini = dataAnthropicMini.response;
 
-            // Update messages states
+            console.log(aiResponseAnthropicLarge);
+            console.log(aiResponseAnthropicMini);
+
+            const aiResponseAnthropicLargeData = JSON.parse(aiResponseAnthropicLarge);
+            const aiResponseAnthropicMiniData = JSON.parse(aiResponseAnthropicMini);
+
+            // Update messages states for Anthropic Large
             setMessagesAnthropicLarge([...messagesAnthropicLarge, userMessage, { 
                 role: "assistant", 
-                content: aiResponseAnthropicLarge, 
-                promptTokens: dataAnthropic.promptTokens, 
-                completionTokens: dataAnthropic.completionTokens, 
-                totalTokens: dataAnthropic.totalTokens, 
-                cost: dataAnthropic.cost,
-                responseTime: dataAnthropic.responseTime,
+                content: aiResponseAnthropicLargeData.response, 
+                promptTokens: dataAnthropicLarge.promptTokens, 
+                completionTokens: dataAnthropicLarge.completionTokens, 
+                totalTokens: dataAnthropicLarge.totalTokens, 
+                cost: dataAnthropicLarge.cost,
+                responseTime: dataAnthropicLarge.responseTime,
+                order: aiResponseAnthropicLargeData.order,
+                orderStatus: aiResponseAnthropicLargeData.order_status
             }]);
 
+            // Update messages states for Anthropic Mini
             setMessagesAnthropicMini([...messagesAnthropicMini, userMessage, { 
                 role: "assistant", 
-                content: aiResponseAnthropicMini, 
+                content: aiResponseAnthropicMiniData.response, 
                 promptTokens: dataAnthropicMini.promptTokens, 
                 completionTokens: dataAnthropicMini.completionTokens, 
                 totalTokens: dataAnthropicMini.totalTokens, 
                 cost: dataAnthropicMini.cost,
                 responseTime: dataAnthropicMini.responseTime,
+                order: aiResponseAnthropicMiniData.order,
+                orderStatus: aiResponseAnthropicMiniData.order_status
             }]);
 
-            // Update display messages with both responses
+            // Update display messages
             setDisplayMessages([...displayMessages, userMessage, 
-                { 
-                    role: "assistant", 
-                    content: aiResponseMatchOpenAILarge,
-                    promptTokens: dataOpenAILarge.promptTokens, 
-                    completionTokens: dataOpenAILarge.completionTokens, 
-                    totalTokens: dataOpenAILarge.totalTokens, 
-                    cost: dataOpenAILarge.cost,
-                    responseTime: dataOpenAILarge.responseTime,
-                    // products: productsOpenAILarge,
-                    // order: orderOpenAILarge,
-                    modelName: "GPT-4"
-                },
-                { 
-                    role: "assistant", 
-                    content: aiResponseMatchOpenAIMini,
-                    promptTokens: dataOpenAIMini.promptTokens, 
-                    completionTokens: dataOpenAIMini.completionTokens, 
-                    totalTokens: dataOpenAIMini.totalTokens, 
-                    cost: dataOpenAIMini.cost,
-                    responseTime: dataOpenAIMini.responseTime,
-                    // products: productsOpenAIMini,
-                    // order: orderOpenAIMini,
-                    modelName: "GPT-4 Mini"
+                {
+                    role: "assistant",
+                    content: aiResponseAnthropicLargeData.response,
+                    promptTokens: dataAnthropicLarge.promptTokens,
+                    completionTokens: dataAnthropicLarge.completionTokens,
+                    totalTokens: dataAnthropicLarge.totalTokens,
+                    cost: dataAnthropicLarge.cost,
+                    responseTime: dataAnthropicLarge.responseTime,
+                    modelName: "Claude 3.5 Sonnet",
+                    order: aiResponseAnthropicLargeData.order,
+                    orderStatus: aiResponseAnthropicLargeData.order_status
                 },
                 {
                     role: "assistant",
-                    content: aiResponseAnthropicLarge,
-                    promptTokens: dataAnthropic.promptTokens,
-                    completionTokens: dataAnthropic.completionTokens,
-                    totalTokens: dataAnthropic.totalTokens,
-                    cost: dataAnthropic.cost,
-                    responseTime: dataAnthropic.responseTime,
-                    modelName: "Claude 3.5 Sonnet"
-                },
-                {
-                    role: "assistant",
-                    content: aiResponseAnthropicMini,
+                    content: aiResponseAnthropicMiniData.response,
                     promptTokens: dataAnthropicMini.promptTokens,
                     completionTokens: dataAnthropicMini.completionTokens,
                     totalTokens: dataAnthropicMini.totalTokens,
                     cost: dataAnthropicMini.cost,
                     responseTime: dataAnthropicMini.responseTime,
-                    modelName: "Claude 3.5 Haiku"
+                    modelName: "Claude 3.5 Haiku",
+                    order: aiResponseAnthropicMiniData.order,
+                    orderStatus: aiResponseAnthropicMiniData.order_status
                 }
             ]);
 
         } catch (error) {
-            console.error("Error fetching OpenAI response:", error);
+            console.error("Error fetching Anthropic response:", error);
         } finally {
             setIsTyping(false);
             setCurrentModel("");
@@ -274,11 +218,11 @@ export default function Chat() {
                                         <div className="flex flex-col text-sm w-full">
                                             <Card className="border-gray-200">
                                                 <CardContent className="p-3">
-                                                    {/* First row: OpenAI responses */}
+                        
                                                     <div className="flex gap-6">
                                                         <div className="flex-1 p-3">
                                                             <div className="font-semibold mb-2 flex justify-between items-center">
-                                                                <span>GPT-4</span>
+                                                                <span>Sonnet</span>
                                                                 {message.responseTime && (
                                                                     <span className="flex flex-row gap-1 text-xs text-gray-500">
                                                                         <Timer size={16} />{message.responseTime}ms
@@ -292,7 +236,12 @@ export default function Chat() {
                                                                 <div className="flex gap-2 items-center">
                                                                     {message.cost !== null && 
                                                                         <span className="flex flex-row gap-1 text-xs text-gray-500">
-                                                                            <Banknote size={16} /> ${message.cost.toFixed(6)}
+                                                                            {message.cost && <><Banknote size={16} /> ${message.cost.toFixed(6)}</>}
+                                                                        </span>
+                                                                    }
+                                                                    {message.orderStatus && 
+                                                                        <span className="flex flex-row gap-1 text-xs text-gray-500 ml-2">
+                                                                            <ShoppingCart size={16} /> {message.orderStatus}
                                                                         </span>
                                                                     }
                                                                 </div>
@@ -306,7 +255,7 @@ export default function Chat() {
                                                                             </DialogTrigger>
                                                                             <DialogContent className="max-h-[80vh] flex flex-col gap-4">
                                                                                 <DialogHeader>
-                                                                                    <DialogTitle>Order Details (GPT-4)</DialogTitle>
+                                                                                    <DialogTitle>Order Details ({message.modelName})</DialogTitle>
                                                                                     <DialogDescription>
                                                                                         Items identified in your order
                                                                                     </DialogDescription>
@@ -314,9 +263,9 @@ export default function Chat() {
                                                                                 <div className="grid gap-4 overflow-y-auto max-h-[60vh] pr-2">
                                                                                     {message.order.map((item, idx) => (
                                                                                         <div key={idx} className="p-2 border rounded">
-                                                                                            <div className="font-medium">{item.productName}</div>
+                                                                                            <div className="font-medium">{item.name}</div>
                                                                                             <div className="text-sm text-gray-500">
-                                                                                                Quantity: {item.quantity}
+                                                                                                Quantity: {item.quantity} {item.unit}
                                                                                             </div>
                                                                                         </div>
                                                                                     ))}
@@ -336,7 +285,7 @@ export default function Chat() {
                                                          displayMessages[index + 1].role === 'assistant' && (
                                                             <div className="flex-1 p-3">
                                                                 <div className="font-semibold mb-2 flex justify-between items-center">
-                                                                    <span>GPT-4 Mini</span>
+                                                                    <span>Haiku</span>
                                                                     {displayMessages[index + 1].responseTime && (
                                                                         <span className="flex flex-row gap-1 text-xs text-gray-500">
                                                                             <Timer size={16} /> {displayMessages[index + 1].responseTime}ms
@@ -350,7 +299,12 @@ export default function Chat() {
                                                                     <div className="flex gap-2 items-center">
                                                                         {displayMessages[index + 1].cost !== null && (
                                                                             <span className="flex flex-row gap-1 text-xs text-gray-500">
-                                                                                <Banknote size={16} /> ${displayMessages[index + 1].cost.toFixed(6)}
+                                                                                <Banknote size={16} /> ${displayMessages[index + 1].cost?.toFixed(6)}
+                                                                            </span>
+                                                                        )}
+                                                                        {displayMessages[index + 1].orderStatus && (
+                                                                            <span className="flex flex-row gap-1 text-xs text-gray-500 ml-2">
+                                                                                <ShoppingCart size={16} /> {displayMessages[index + 1].orderStatus}
                                                                             </span>
                                                                         )}
                                                                     </div>
@@ -367,7 +321,7 @@ export default function Chat() {
                                                                                         </DialogTrigger>
                                                                                         <DialogContent className="max-h-[80vh] flex flex-col gap-4">
                                                                                             <DialogHeader>
-                                                                                                <DialogTitle>Order Details (GPT-4 Mini)</DialogTitle>
+                                                                                                <DialogTitle>Order Details (Haiku)</DialogTitle>
                                                                                                 <DialogDescription>
                                                                                                     Items identified in your order
                                                                                                 </DialogDescription>
@@ -375,9 +329,9 @@ export default function Chat() {
                                                                                             <div className="grid gap-4 overflow-y-auto max-h-[60vh] pr-2">
                                                                                                 {nextMessage.order.map((item, idx) => (
                                                                                                     <div key={idx} className="p-2 border rounded">
-                                                                                                        <div className="font-medium">{item.productName}</div>
+                                                                                                        <div className="font-medium">{item.name}</div>
                                                                                                         <div className="text-sm text-gray-500">
-                                                                                                            Quantity: {item.quantity}
+                                                                                                            Quantity: {item.quantity} {item.unit}
                                                                                                         </div>
                                                                                                     </div>
                                                                                                 ))}
@@ -424,6 +378,11 @@ export default function Chat() {
                                                                             <Banknote size={16} /> ${Number(displayMessages[index + 2].cost).toFixed(6)}
                                                                         </span>
                                                                     )}
+                                                                    {displayMessages[index + 2]?.orderStatus && (
+                                                                        <span className="flex flex-row gap-1 text-xs text-gray-500 ml-2">
+                                                                            <ShoppingCart size={16} /> {displayMessages[index + 2].orderStatus}
+                                                                        </span>
+                                                                    )}
                                                                 </div>
                                                             </div>
 
@@ -445,6 +404,11 @@ export default function Chat() {
                                                                     {displayMessages[index + 3]?.cost != null && (
                                                                         <span className="flex flex-row gap-1 text-xs text-gray-500">
                                                                             <Banknote size={16} /> ${Number(displayMessages[index + 3].cost).toFixed(6)}
+                                                                        </span>
+                                                                    )}
+                                                                    {displayMessages[index + 3]?.orderStatus && (
+                                                                        <span className="flex flex-row gap-1 text-xs text-gray-500 ml-2">
+                                                                            <ShoppingCart size={16} /> {displayMessages[index + 3].orderStatus}
                                                                         </span>
                                                                     )}
                                                                 </div>

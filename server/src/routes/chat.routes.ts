@@ -218,6 +218,8 @@ const getOpenAIResponse = async (req: GetOpenAIResponseRequest, res: Response, n
         });
 
         const cost = computeCost(llm, data);
+        console.log(`Cost for (${llm}): ${cost}`);
+
         const responseTime = Date.now() - startTime;
         return res.status(200).json({
             aiResponse: responseMessage,
@@ -351,11 +353,9 @@ const getResponseAnthropic = async (req: Request, res: Response, next: NextFunct
         });
 
 
-
         while (data.stop_reason === "tool_use") {
             const toolResults: toolContentanthropic[] = [];
 
-            console.log('Content blocks: \n', data.content);
             for (const contentBlock of data.content) {
                 if (contentBlock.type === "tool_use") {
                     const toolUseId = contentBlock.id;
@@ -364,7 +364,7 @@ const getResponseAnthropic = async (req: Request, res: Response, next: NextFunct
                     switch (contentBlock.name) {
                         case "searchProducts":
                             result = await performVectorSearch("products", "default", query, 20);
-                            console.log("Search results:", result);
+                        
                             toolResults.push({
                                 type: "tool_result",
                                 tool_use_id: toolUseId,
@@ -386,8 +386,6 @@ const getResponseAnthropic = async (req: Request, res: Response, next: NextFunct
 
             response = await createAnthropicAPIMessage(llm, systemPrompt, currentMessages, toolsAnthropic);
             const newData = await response.json();
-
-
 
             if (newData.content) {
                 currentMessages.push({
@@ -412,21 +410,27 @@ const getResponseAnthropic = async (req: Request, res: Response, next: NextFunct
             responseMessage = JSON.parse(data.content);
         }
 
-
-        console.log('Response message: \n', responseMessage);
-
+        const cost = computeCost(llm, {
+            usage: {
+                prompt_tokens: data.usage.input_tokens,
+                completion_tokens: data.usage.output_tokens
+            }
+        });
 
 
         return res.status(200).json({
             response: responseMessage,
             messages: currentMessages,
             responseTime,
+            promptTokens: data.usage.input_tokens,
+            completionTokens: data.usage.output_tokens,
+            totalTokens: data.usage.total_tokens,
+            cost: cost,
         });
     } catch (error) {
         handleAnthropicError(error, res, next);
     }
 }
-
 
 // Routes
 router.post("/getOpenAIResponse", getOpenAIResponse as express.RequestHandler);
