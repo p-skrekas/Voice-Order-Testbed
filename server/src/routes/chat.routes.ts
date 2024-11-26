@@ -87,7 +87,7 @@ const responseSchema = {
 
 // Function to get the response from OpenAI
 const getOpenAIResponse = async (req: GetOpenAIResponseRequest, res: Response, next: NextFunction) => {
-
+    const startTime = Date.now();
     try {
         let cleanedProducts: any[] = [];
 
@@ -123,7 +123,6 @@ const getOpenAIResponse = async (req: GetOpenAIResponseRequest, res: Response, n
             });
         }
 
-        const startTime = Date.now();
         // Get response from OpenAI
         const response = await fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
@@ -183,8 +182,8 @@ const getOpenAIResponse = async (req: GetOpenAIResponseRequest, res: Response, n
                 content: responseMessage
             });
 
-            const responseTime = Date.now() - startTime;
             const cost = computeCost(llm, dataWithTools);
+            const responseTime = Date.now() - startTime;
             return res.status(200).json({
                 aiResponse: responseMessage,
                 messages: messages,
@@ -289,8 +288,7 @@ const createAnthropicAPIMessage = async (
     messages: AnthropicMessage[],
     tools: any[]
 ) => {
-    console.log('Messages: \n', messages);
-    console.log('llm: \n', llm);
+
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
@@ -322,12 +320,15 @@ const createAnthropicAPIMessage = async (
 
 // Function to get the response from Anthropic
 const getResponseAnthropic = async (req: Request, res: Response, next: NextFunction) => {
+    const startTime = Date.now();
     const { messages, llm, query } = req.body as GetAnthropicResponseRequest;
     const settings = await SettingsModel.findOne();
     if (!settings) {
         return res.status(400).json({ error: 'Settings not found' });
     }
 
+    console.log('Received messages: ', messages);
+    
     let systemPrompt = "";
     if (llm === "claude-3-5-sonnet-20241022") {
         systemPrompt = settings.systemPromptSonnet;
@@ -343,9 +344,14 @@ const getResponseAnthropic = async (req: Request, res: Response, next: NextFunct
             content: query
         });
 
-        const startTime = Date.now();
         let response = await createAnthropicAPIMessage(llm, systemPrompt, currentMessages, toolsAnthropic);
         let data = await response.json();
+
+        console.log('Pushing assistant message', {
+            role: "assistant",
+            content: data.content
+        })
+
 
         currentMessages.push({
             role: "assistant",
@@ -358,12 +364,15 @@ const getResponseAnthropic = async (req: Request, res: Response, next: NextFunct
 
             for (const contentBlock of data.content) {
                 if (contentBlock.type === "tool_use") {
+                    console.log('Tool use found: ', contentBlock);
                     const toolUseId = contentBlock.id;
+
                     let result;
 
                     switch (contentBlock.name) {
                         case "searchProducts":
-                            result = await performVectorSearch("products", "default", query, 20);
+                
+                            result = await performVectorSearch("products", "default", contentBlock.input['query'], 20);
                         
                             toolResults.push({
                                 type: "tool_result",
@@ -396,7 +405,6 @@ const getResponseAnthropic = async (req: Request, res: Response, next: NextFunct
 
             data = newData;
         }
-
         const responseTime = Date.now() - startTime;
 
         let responseMessage = "";
@@ -417,15 +425,25 @@ const getResponseAnthropic = async (req: Request, res: Response, next: NextFunct
             }
         });
 
+        let parsedResponse;
+        try {
+            // Parse the response message if it's a string
+            parsedResponse = typeof responseMessage === 'string' ? JSON.parse(responseMessage) : responseMessage;
+        } catch (error) {
+            console.error('Error parsing response:', error);
+            parsedResponse = { response: responseMessage, order: [], order_status: 'unknown' };
+        }
 
         return res.status(200).json({
-            response: responseMessage,
+            aiResponse: responseMessage,
             messages: currentMessages,
             responseTime,
             promptTokens: data.usage.input_tokens,
             completionTokens: data.usage.output_tokens,
-            totalTokens: data.usage.total_tokens,
+            totalTokens: data.usage.input_tokens + data.usage.output_tokens,
             cost: cost,
+            orderStatus: parsedResponse.order_status,
+            products: '[]'
         });
     } catch (error) {
         handleAnthropicError(error, res, next);

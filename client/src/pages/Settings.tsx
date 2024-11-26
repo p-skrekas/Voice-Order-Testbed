@@ -332,6 +332,8 @@ export default function Settings() {
                                                             <SelectItem value="30">30 products</SelectItem>
                                                             <SelectItem value="40">40 products</SelectItem>
                                                             <SelectItem value="50">50 products</SelectItem>
+                                                            <SelectItem value="100">100 products</SelectItem>
+                                                            <SelectItem value="200">200 products</SelectItem>
                                                         </SelectContent>
                                                     </Select>
                                                     <FormDescription>

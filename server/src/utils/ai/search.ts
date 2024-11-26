@@ -35,6 +35,7 @@ export async function performVectorSearch(
             },
             {
                 $project: {
+                    _id: 0,
                     name: 1,
                     id: 1,
                     units_per_package: 1,
@@ -48,7 +49,7 @@ export async function performVectorSearch(
             }
         ]).toArray();
 
-        
+        console.log('Results: ', results);
         return results;
 
     } catch (error) {

@@ -35,13 +35,12 @@ if (process.env.NODE_ENV !== 'production') {
 export default function Chat() {
     const [messagesAnthropicLarge, setMessagesAnthropicLarge] = useState<Message[]>([]);
     const [messagesAnthropicMini, setMessagesAnthropicMini] = useState<Message[]>([]);
-
     const [displayMessages, setDisplayMessages] = useState<Message[]>([]);
     const [inputMessage, setInputMessage] = useState('');
     const [isTyping, setIsTyping] = useState(false);
     const [currentModel, setCurrentModel] = useState<string>("");
 
-
+    
 
     const getAnthropicResponseLarge = async (query: string, messages: Message[]) => {
         const responseAnthropic = await fetch(`${BACKEND_URL}/api/chat/getAnthropicResponse`, {
@@ -88,95 +87,90 @@ export default function Chat() {
             totalTokens: 0, 
             cost: 0 
         };
+
         
         setMessagesAnthropicLarge([...messagesAnthropicLarge, userMessage]);
         setMessagesAnthropicMini([...messagesAnthropicMini, userMessage]);
         setDisplayMessages([...displayMessages, userMessage]);
         setInputMessage('');
 
-
-
         try {
-
             // Update status for Anthropic large model
             setCurrentModel("Getting response from Claude 3.5 Sonnet");
-            const responseAnthropic = await getAnthropicResponseLarge(inputMessage.trim(), [...messagesAnthropicLarge, userMessage]);
-
+            const responseAnthropicLarge = await getAnthropicResponseLarge(inputMessage.trim(), [...messagesAnthropicLarge, userMessage]);
+    
             // Update status for Anthropic mini model
             setCurrentModel("Getting response from Claude 3.5 Haiku");
             const responseAnthropicMini = await getAnthropicResponseMini(inputMessage.trim(), [...messagesAnthropicMini, userMessage]);
+                
 
-            const dataAnthropicLarge = await responseAnthropic.json();
+            const dataAnthropicLarge = await responseAnthropicLarge.json();
             const dataAnthropicMini = await responseAnthropicMini.json();
 
-            console.log(dataAnthropicLarge);
-            console.log(dataAnthropicMini);
+            const aiResponseAnthropicLarge = JSON.parse(dataAnthropicLarge.aiResponse)
+            const aiResponseAnthropicMini = JSON.parse(dataAnthropicMini.aiResponse)
 
+          
+            console.log('aiResponseAnthropicMiniOrderStatus: ', aiResponseAnthropicMini.order_status)
 
-
-
-            const aiResponseAnthropicLarge = dataAnthropicLarge.response;
-            const aiResponseAnthropicMini = dataAnthropicMini.response;
-
-            console.log(aiResponseAnthropicLarge);
-            console.log(aiResponseAnthropicMini);
-
-            const aiResponseAnthropicLargeData = JSON.parse(aiResponseAnthropicLarge);
-            const aiResponseAnthropicMiniData = JSON.parse(aiResponseAnthropicMini);
 
             // Update messages states for Anthropic Large
             setMessagesAnthropicLarge([...messagesAnthropicLarge, userMessage, { 
                 role: "assistant", 
-                content: aiResponseAnthropicLargeData.response, 
+                content: aiResponseAnthropicLarge.response, 
                 promptTokens: dataAnthropicLarge.promptTokens, 
                 completionTokens: dataAnthropicLarge.completionTokens, 
                 totalTokens: dataAnthropicLarge.totalTokens, 
                 cost: dataAnthropicLarge.cost,
                 responseTime: dataAnthropicLarge.responseTime,
-                order: aiResponseAnthropicLargeData.order,
-                orderStatus: aiResponseAnthropicLargeData.order_status
+                order: aiResponseAnthropicLarge.order,
+                orderStatus: aiResponseAnthropicLarge.order_status,
+    
             }]);
 
             // Update messages states for Anthropic Mini
             setMessagesAnthropicMini([...messagesAnthropicMini, userMessage, { 
                 role: "assistant", 
-                content: aiResponseAnthropicMiniData.response, 
+                content: aiResponseAnthropicMini.response, 
                 promptTokens: dataAnthropicMini.promptTokens, 
                 completionTokens: dataAnthropicMini.completionTokens, 
                 totalTokens: dataAnthropicMini.totalTokens, 
                 cost: dataAnthropicMini.cost,
-                responseTime: dataAnthropicMini.responseTime,
-                order: aiResponseAnthropicMiniData.order,
-                orderStatus: aiResponseAnthropicMiniData.order_status
+                responseTime: aiResponseAnthropicMini.responseTime,
+                order: aiResponseAnthropicMini.order,
+                orderStatus: aiResponseAnthropicMini.order_status,
+    
             }]);
 
             // Update display messages
             setDisplayMessages([...displayMessages, userMessage, 
                 {
                     role: "assistant",
-                    content: aiResponseAnthropicLargeData.response,
+                    content: aiResponseAnthropicLarge.response,
                     promptTokens: dataAnthropicLarge.promptTokens,
                     completionTokens: dataAnthropicLarge.completionTokens,
                     totalTokens: dataAnthropicLarge.totalTokens,
                     cost: dataAnthropicLarge.cost,
                     responseTime: dataAnthropicLarge.responseTime,
                     modelName: "Claude 3.5 Sonnet",
-                    order: aiResponseAnthropicLargeData.order,
-                    orderStatus: aiResponseAnthropicLargeData.order_status
+                    order: aiResponseAnthropicLarge.order,
+                    orderStatus: aiResponseAnthropicLarge.order_status,
                 },
                 {
                     role: "assistant",
-                    content: aiResponseAnthropicMiniData.response,
+                    content: aiResponseAnthropicMini.response,
                     promptTokens: dataAnthropicMini.promptTokens,
                     completionTokens: dataAnthropicMini.completionTokens,
                     totalTokens: dataAnthropicMini.totalTokens,
                     cost: dataAnthropicMini.cost,
                     responseTime: dataAnthropicMini.responseTime,
                     modelName: "Claude 3.5 Haiku",
-                    order: aiResponseAnthropicMiniData.order,
-                    orderStatus: aiResponseAnthropicMiniData.order_status
+                    order: aiResponseAnthropicMini.order,
+                    orderStatus: aiResponseAnthropicMini.order_status
                 }
             ]);
+
+
 
         } catch (error) {
             console.error("Error fetching Anthropic response:", error);
@@ -232,53 +226,72 @@ export default function Chat() {
                                                             <div className="rounded-lg p-3 bg-gray-200 text-gray-800">
                                                                 <div className="flex-1">{message.content}</div>
                                                             </div>
-                                                            <div className="mt-1 flex justify-between items-center text-xs text-gray-500">
-                                                                <div className="flex gap-2 items-center">
-                                                                    {message.cost !== null && 
-                                                                        <span className="flex flex-row gap-1 text-xs text-gray-500">
-                                                                            {message.cost && <><Banknote size={16} /> ${message.cost.toFixed(6)}</>}
-                                                                        </span>
-                                                                    }
-                                                                    {message.orderStatus && 
-                                                                        <span className="flex flex-row gap-1 text-xs text-gray-500 ml-2">
-                                                                            <ShoppingCart size={16} /> {message.orderStatus}
-                                                                        </span>
-                                                                    }
-                                                                </div>
-                                                                <div>
-                                                                    {message.order && message.order.length > 0 && (
-                                                                        <Dialog>
-                                                                            <DialogTrigger asChild>
-                                                                                <Button variant="outline" size="sm">
-                                                                                    <ShoppingCart size={16} />
-                                                                                </Button>
-                                                                            </DialogTrigger>
-                                                                            <DialogContent className="max-h-[80vh] flex flex-col gap-4">
-                                                                                <DialogHeader>
-                                                                                    <DialogTitle>Order Details ({message.modelName})</DialogTitle>
-                                                                                    <DialogDescription>
-                                                                                        Items identified in your order
-                                                                                    </DialogDescription>
-                                                                                </DialogHeader>
-                                                                                <div className="grid gap-4 overflow-y-auto max-h-[60vh] pr-2">
-                                                                                    {message.order.map((item, idx) => (
-                                                                                        <div key={idx} className="p-2 border rounded">
-                                                                                            <div className="font-medium">{item.name}</div>
-                                                                                            <div className="text-sm text-gray-500">
-                                                                                                Quantity: {item.quantity} {item.unit}
-                                                                                            </div>
-                                                                                        </div>
-                                                                                    ))}
-                                                                                </div>
-                                                                                <DialogFooter className="mt-4">
+                       
+                                                            <div className="mt-1 flex flex-col gap-1">
+                                                                <div className="flex justify-between items-center text-xs text-gray-500">
+                                                                    <div className="flex gap-2 items-center">
+                                                                        {message.cost !== null && 
+                                                                            <span className="flex flex-row gap-1 text-xs text-gray-500">
+                                                                                {message.cost && <><Banknote size={16} /> ${message.cost.toFixed(6)}</>}
+                                                                            </span>
+                                                                        }
+                                                                        {message.orderStatus && 
+                                                                            <span className="flex flex-row gap-1 text-xs text-gray-500 ml-2">
+                                                                                <ShoppingCart size={16} /> {message.orderStatus}
+                                                                            </span>
+                                                                        }
+                                                                    </div>
+                                                                    <div>
+                                                                        {(() => {
+                                                                            const order = message.order;
+                                                                            return order && Array.isArray(order) && order.length > 0 && (
+                                                                                <Dialog>
                                                                                     <DialogTrigger asChild>
-                                                                                        <Button variant="destructive">Close</Button>
+                                                                                        <Button variant="outline" size="sm">
+                                                                                            <ShoppingCart size={16} />
+                                                                                        </Button>
                                                                                     </DialogTrigger>
-                                                                                </DialogFooter>
-                                                                            </DialogContent>
-                                                                        </Dialog>
-                                                                    )}
+                                                                                    <DialogContent className="max-h-[80vh] flex flex-col gap-4">
+                                                                                        <DialogHeader>
+                                                                                            <DialogTitle>Order Details ({message.modelName})</DialogTitle>
+                                                                                            <DialogDescription>
+                                                                                                Items identified in your order
+                                                                                            </DialogDescription>
+                                                                                        </DialogHeader>
+                                                                                        <div className="grid gap-4 overflow-y-auto max-h-[60vh] pr-2">
+                                                                                            {order.map((item, idx) => (
+                                                                                                <div key={idx} className="p-2 border rounded">
+                                                                                                    <div className="font-medium">{item.name}</div>
+                                                                                                    <div className="text-sm text-gray-500">
+                                                                                                        ID: {item.id}
+                                                                                                        <br />
+                                                                                                        Quantity: {item.quantity} {item.unit}
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                            ))}
+                                                                                        </div>
+                                                                                        <DialogFooter className="mt-4">
+                                                                                            <DialogTrigger asChild>
+                                                                                                <Button variant="destructive">Close</Button>
+                                                                                            </DialogTrigger>
+                                                                                        </DialogFooter>
+                                                                                    </DialogContent>
+                                                                                </Dialog>
+                                                                            );
+                                                                        })()}
+                                                                    </div>
                                                                 </div>
+                                                                <div className="text-xs text-gray-500">
+                                                                    Total tokens: {message.totalTokens?.toLocaleString()} ({message.promptTokens?.toLocaleString()} prompt + {message.completionTokens?.toLocaleString()} completion)
+                                                                </div>
+                                                                {index + 1 < displayMessages.length && 
+                                                                 displayMessages[index + 1].role === 'assistant' && 
+                                                                 message.cost && 
+                                                                 displayMessages[index + 1].cost && (
+                                                                    <div className="text-xs text-gray-500">
+                                                                        ({(message.cost / displayMessages[index + 1].cost).toFixed(1)}x more expensive than Haiku)
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         </div>
                                                         {index + 1 < displayMessages.length && 
@@ -295,24 +308,24 @@ export default function Chat() {
                                                                 <div className="rounded-lg p-3 bg-gray-200 text-gray-800">
                                                                     <div className="flex-1">{displayMessages[index + 1].content}</div>
                                                                 </div>
-                                                                <div className="mt-1 flex justify-between items-center text-xs text-gray-500">
-                                                                    <div className="flex gap-2 items-center">
-                                                                        {displayMessages[index + 1].cost !== null && (
-                                                                            <span className="flex flex-row gap-1 text-xs text-gray-500">
-                                                                                <Banknote size={16} /> ${displayMessages[index + 1].cost?.toFixed(6)}
-                                                                            </span>
-                                                                        )}
-                                                                        {displayMessages[index + 1].orderStatus && (
-                                                                            <span className="flex flex-row gap-1 text-xs text-gray-500 ml-2">
-                                                                                <ShoppingCart size={16} /> {displayMessages[index + 1].orderStatus}
-                                                                            </span>
-                                                                        )}
-                                                                    </div>
-                                                                    <div>
-                                                                        {(() => {
-                                                                            const nextMessage = displayMessages[index + 1];
-                                                                            if (nextMessage?.order && nextMessage.order.length > 0) {
-                                                                                return (
+                                                                <div className="mt-1 flex flex-col gap-1">
+                                                                    <div className="flex justify-between items-center text-xs text-gray-500">
+                                                                        <div className="flex gap-2 items-center">
+                                                                            {displayMessages[index + 1].cost !== null && (
+                                                                                <span className="flex flex-row gap-1 text-xs text-gray-500">
+                                                                                    <Banknote size={16} /> ${displayMessages[index + 1].cost?.toFixed(6)}
+                                                                                </span>
+                                                                            )}
+                                                                            {displayMessages[index + 1].orderStatus && (
+                                                                                <span className="flex flex-row gap-1 text-xs text-gray-500 ml-2">
+                                                                                    <ShoppingCart size={16} /> {displayMessages[index + 1].orderStatus}
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+                                                                        <div>
+                                                                            {(() => {
+                                                                                const order = displayMessages[index + 1]?.order;
+                                                                                return order && Array.isArray(order) && order.length > 0 && (
                                                                                     <Dialog>
                                                                                         <DialogTrigger asChild>
                                                                                             <Button variant="outline" size="sm">
@@ -321,16 +334,18 @@ export default function Chat() {
                                                                                         </DialogTrigger>
                                                                                         <DialogContent className="max-h-[80vh] flex flex-col gap-4">
                                                                                             <DialogHeader>
-                                                                                                <DialogTitle>Order Details (Haiku)</DialogTitle>
+                                                                                                <DialogTitle>Order Details ({displayMessages[index + 1]?.modelName})</DialogTitle>
                                                                                                 <DialogDescription>
                                                                                                     Items identified in your order
                                                                                                 </DialogDescription>
                                                                                             </DialogHeader>
                                                                                             <div className="grid gap-4 overflow-y-auto max-h-[60vh] pr-2">
-                                                                                                {nextMessage.order.map((item, idx) => (
+                                                                                                {order.map((item, idx) => (
                                                                                                     <div key={idx} className="p-2 border rounded">
                                                                                                         <div className="font-medium">{item.name}</div>
                                                                                                         <div className="text-sm text-gray-500">
+                                                                                                            ID: {item.id}
+                                                                                                            <br />
                                                                                                             Quantity: {item.quantity} {item.unit}
                                                                                                         </div>
                                                                                                     </div>
@@ -344,9 +359,11 @@ export default function Chat() {
                                                                                         </DialogContent>
                                                                                     </Dialog>
                                                                                 );
-                                                                            }
-                                                                            return null;
-                                                                        })()}
+                                                                            })()}
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="text-xs text-gray-500">
+                                                                        Total tokens: {displayMessages[index + 1].totalTokens?.toLocaleString()} ({displayMessages[index + 1].promptTokens?.toLocaleString()} prompt + {displayMessages[index + 1].completionTokens?.toLocaleString()} completion)
                                                                     </div>
                                                                 </div>
                                                             </div>
