@@ -86,156 +86,156 @@ const responseSchema = {
 };
 
 // Function to get the response from OpenAI
-const getOpenAIResponse = async (req: GetOpenAIResponseRequest, res: Response, next: NextFunction) => {
-    const startTime = Date.now();
-    try {
-        let cleanedProducts: any[] = [];
+// const getOpenAIResponse = async (req: GetOpenAIResponseRequest, res: Response, next: NextFunction) => {
+//     const startTime = Date.now();
+//     try {
+//         let cleanedProducts: any[] = [];
 
-        const { llm, query, messages } = req.body as GetOpenAIResponseRequest;
+//         const { llm, query, messages } = req.body as GetOpenAIResponseRequest;
 
 
-        if (messages.length === 0) {
-            return res.status(400).json({ error: 'No messages provided' });
-        }
+//         if (messages.length === 0) {
+//             return res.status(400).json({ error: 'No messages provided' });
+//         }
 
-        const settings = await SettingsModel.findOne();
+//         const settings = await SettingsModel.findOne();
 
-        if (!settings) {
-            return res.status(400).json({ error: 'Settings not found' });
-        }
+//         if (!settings) {
+//             return res.status(400).json({ error: 'Settings not found' });
+//         }
 
-        if (!settings.systemPromptOpenAILarge) {
-            return res.status(400).json({ error: 'System prompt not found' });
-        }
+//         if (!settings.systemPromptOpenAILarge) {
+//             return res.status(400).json({ error: 'System prompt not found' });
+//         }
 
-        let systemPrompt = "";
-        if (llm === "gpt-4o-mini-2024-07-18") {
-            systemPrompt = settings.systemPromptOpenAIMini;
-        } else if (llm === "gpt-4o-2024-08-06") {
-            systemPrompt = settings.systemPromptOpenAILarge;
-        }
+//         let systemPrompt = "";
+//         if (llm === "gpt-4o-mini-2024-07-18") {
+//             systemPrompt = settings.systemPromptOpenAIMini;
+//         } else if (llm === "gpt-4o-2024-08-06") {
+//             systemPrompt = settings.systemPromptOpenAILarge;
+//         }
 
-        // Add system message if not present
-        if (messages.length === 0 || messages[0].role !== "system") {
-            messages.unshift({
-                role: "system",
-                content: systemPrompt
-            });
-        }
+//         // Add system message if not present
+//         if (messages.length === 0 || messages[0].role !== "system") {
+//             messages.unshift({
+//                 role: "system",
+//                 content: systemPrompt
+//             });
+//         }
 
-        // Get response from OpenAI
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
-            },
-            body: JSON.stringify({
-                model: llm,
-                messages: messages,
-                tools: toolsOpenAI,
-                temperature: 0,
-                response_format: responseSchema
-            })
-        });
+//         // Get response from OpenAI
+//         const response = await fetch('https://api.openai.com/v1/chat/completions', {
+//             method: 'POST',
+//             headers: {
+//                 'Content-Type': 'application/json',
+//                 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+//             },
+//             body: JSON.stringify({
+//                 model: llm,
+//                 messages: messages,
+//                 tools: toolsOpenAI,
+//                 temperature: 0,
+//                 response_format: responseSchema
+//             })
+//         });
 
-        const data = await response.json();
+//         const data = await response.json();
 
-        // If the response is a tool call
-        if (data.choices[0].finish_reason === "tool_calls") {
-            const toolCall = data.choices[0].message.tool_calls[0];
+//         // If the response is a tool call
+//         if (data.choices[0].finish_reason === "tool_calls") {
+//             const toolCall = data.choices[0].message.tool_calls[0];
 
-            if (toolCall.function.name === "searchProducts") {
-                const products = await performVectorSearch("products", "default", query, 20);
-                cleanedProducts = products.map(product => {
-                    const { score, published, ...rest } = product;
-                    return rest;
-                });
+//             if (toolCall.function.name === "searchProducts") {
+//                 const products = await performVectorSearch("products", "default", query, 20);
+//                 cleanedProducts = products.map(product => {
+//                     const { score, published, ...rest } = product;
+//                     return rest;
+//                 });
 
-                // Add the tool's message with the correct tool_call_id from the assistant's message
-                messages.push({
-                    role: "function",
-                    name: toolCall.function.name,
-                    content: JSON.stringify(cleanedProducts),
-                    tool_call_id: toolCall.id
-                });
-            }
+//                 // Add the tool's message with the correct tool_call_id from the assistant's message
+//                 messages.push({
+//                     role: "function",
+//                     name: toolCall.function.name,
+//                     content: JSON.stringify(cleanedProducts),
+//                     tool_call_id: toolCall.id
+//                 });
+//             }
 
-            const responsewithTools = await fetch('https://api.openai.com/v1/chat/completions', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
-                },
-                body: JSON.stringify({
-                    model: llm,
-                    messages: messages,
-                    tools: toolsOpenAI
-                })
-            });
+//             const responsewithTools = await fetch('https://api.openai.com/v1/chat/completions', {
+//                 method: 'POST',
+//                 headers: {
+//                     'Content-Type': 'application/json',
+//                     'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+//                 },
+//                 body: JSON.stringify({
+//                     model: llm,
+//                     messages: messages,
+//                     tools: toolsOpenAI
+//                 })
+//             });
 
-            const dataWithTools = await responsewithTools.json();
-            const responseMessage = dataWithTools.choices[0].message.content;
+//             const dataWithTools = await responsewithTools.json();
+//             const responseMessage = dataWithTools.choices[0].message.content;
 
-            messages.push({
-                role: "assistant",
-                content: responseMessage
-            });
+//             messages.push({
+//                 role: "assistant",
+//                 content: responseMessage
+//             });
 
-            const cost = computeCost(llm, dataWithTools);
-            const responseTime = Date.now() - startTime;
-            return res.status(200).json({
-                aiResponse: responseMessage,
-                messages: messages,
-                promptTokens: dataWithTools.usage.prompt_tokens,
-                completionTokens: dataWithTools.usage.completion_tokens,
-                totalTokens: dataWithTools.usage.total_tokens,
-                cost: cost,
-                products: JSON.stringify(cleanedProducts),
-                responseTime,
-                llm,
-                orderStatus: dataWithTools.choices[0].message.content.order_status
-            });
-        }
+//             const cost = computeCost(llm, dataWithTools);
+//             const responseTime = Date.now() - startTime;
+//             return res.status(200).json({
+//                 aiResponse: responseMessage,
+//                 messages: messages,
+//                 promptTokens: dataWithTools.usage.prompt_tokens,
+//                 completionTokens: dataWithTools.usage.completion_tokens,
+//                 totalTokens: dataWithTools.usage.total_tokens,
+//                 cost: cost,
+//                 products: JSON.stringify(cleanedProducts),
+//                 responseTime,
+//                 llm,
+//                 orderStatus: dataWithTools.choices[0].message.content.order_status
+//             });
+//         }
 
-        // If we get here, it means it wasn't a tool call
-        if (!data.choices || data.choices.length === 0) {
-            return res.status(400).json({ error: 'No response from OpenAI' });
-        }
+//         // If we get here, it means it wasn't a tool call
+//         if (!data.choices || data.choices.length === 0) {
+//             return res.status(400).json({ error: 'No response from OpenAI' });
+//         }
 
-        const responseMessage = data.choices[0].message.content;
+//         const responseMessage = data.choices[0].message.content;
 
-        console.log('Response message: \n', responseMessage);
+//         console.log('Response message: \n', responseMessage);
 
-        if (!responseMessage) {
-            return res.status(400).json({ error: 'No response from OpenAI' });
-        }
+//         if (!responseMessage) {
+//             return res.status(400).json({ error: 'No response from OpenAI' });
+//         }
 
-        messages.push({
-            role: "assistant",
-            content: responseMessage
-        });
+//         messages.push({
+//             role: "assistant",
+//             content: responseMessage
+//         });
 
-        const cost = computeCost(llm, data);
-        console.log(`Cost for (${llm}): ${cost}`);
+//         const cost = computeCost(llm, data);
+//         console.log(`Cost for (${llm}): ${cost}`);
 
-        const responseTime = Date.now() - startTime;
-        return res.status(200).json({
-            aiResponse: responseMessage,
-            messages: messages,
-            promptTokens: data.usage.prompt_tokens,
-            completionTokens: data.usage.completion_tokens,
-            totalTokens: data.usage.total_tokens,
-            cost: cost,
-            products: JSON.stringify(cleanedProducts),
-            responseTime,
-            llm,
-            orderStatus: data.choices[0].message.content.order_status
-        });
-    } catch (error) {
-        next(error);
-    }
-};
+//         const responseTime = Date.now() - startTime;
+//         return res.status(200).json({
+//             aiResponse: responseMessage,
+//             messages: messages,
+//             promptTokens: data.usage.prompt_tokens,
+//             completionTokens: data.usage.completion_tokens,
+//             totalTokens: data.usage.total_tokens,
+//             cost: cost,
+//             products: JSON.stringify(cleanedProducts),
+//             responseTime,
+//             llm,
+//             orderStatus: data.choices[0].message.content.order_status
+//         });
+//     } catch (error) {
+//         next(error);
+//     }
+// };
 
 
 // ------------------------------------------
@@ -299,7 +299,7 @@ const createAnthropicAPIMessage = async (
         },
         body: JSON.stringify({
             model: llm,
-            system: systemPrompt,
+            // system: systemPrompt,
             messages: messages.map(msg => ({
                 role: msg.role,
                 content: typeof msg.content === 'string' ? msg.content : msg.content
@@ -328,21 +328,35 @@ const getResponseAnthropic = async (req: Request, res: Response, next: NextFunct
     }
 
     console.log('Received messages: ', messages);
-    
+
     let systemPrompt = "";
-    if (llm === "claude-3-5-sonnet-20241022") {
+    let userPromptTemplate = "";
+    let assistantPrefill = "";
+    if (llm.includes("sonnet")) {
         systemPrompt = settings.systemPromptSonnet;
-    } else if (llm === "claude-3-5-haiku-20241022") {
+        userPromptTemplate = settings.userPromptTemplateSonnet;
+        assistantPrefill = settings.assistantPrefillSonnet;
+    } else if (llm.includes("haiku")) {
         systemPrompt = settings.systemPromptHaiku;
+        userPromptTemplate = settings.userPromptTemplateHaiku;
+        assistantPrefill = settings.assistantPrefillHaiku;
     }
 
     try {
         let currentMessages: AnthropicMessage[] = [...messages];
-
+        
         currentMessages.push({
             role: "user",
-            content: query
+            content: userPromptTemplate.replace("${query}", query)
         });
+
+        if (currentMessages.length === 1) {
+            currentMessages.push({
+                role: "assistant",
+                content: assistantPrefill
+            });
+        }
+
 
         let response = await createAnthropicAPIMessage(llm, systemPrompt, currentMessages, toolsAnthropic);
         let data = await response.json();
@@ -451,7 +465,7 @@ const getResponseAnthropic = async (req: Request, res: Response, next: NextFunct
 }
 
 // Routes
-router.post("/getOpenAIResponse", getOpenAIResponse as express.RequestHandler);
+// router.post("/getOpenAIResponse", getOpenAIResponse as express.RequestHandler);
 router.post("/getAnthropicResponse", getResponseAnthropic as express.RequestHandler);
 
 

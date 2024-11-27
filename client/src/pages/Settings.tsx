@@ -12,9 +12,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs"
 import { useCustomToast } from "../components/custom/CustomToaster";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 
-
-
-
 let BACKEND_URL: string;
 if (process.env.NODE_ENV !== 'production') {
     BACKEND_URL = 'http://localhost:5000';
@@ -23,11 +20,15 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 const sonnetSchema = z.object({
-    systemPromptSonnet: z.string().min(1, { message: "System prompt is required." })
+    systemPromptSonnet: z.string().min(1, { message: "System prompt is required." }),
+    userPromptTemplateSonnet: z.string().min(1, { message: "User prompt template is required." }),
+    assistantPrefillSonnet: z.string().min(1, { message: "Assistant prefill is required." })
 });
 
 const haikuSchema = z.object({
-    systemPromptHaiku: z.string().min(1, { message: "System prompt is required." })
+    systemPromptHaiku: z.string().min(1, { message: "System prompt is required." }),
+    userPromptTemplateHaiku: z.string().min(1, { message: "User prompt template is required." }),
+    assistantPrefillHaiku: z.string().min(1, { message: "Assistant prefill is required." })
 });
 
 const vectorSearchSchema = z.object({
@@ -43,14 +44,18 @@ export default function Settings() {
     const sonnetForm = useForm<z.infer<typeof sonnetSchema>>({
         resolver: zodResolver(sonnetSchema),
         defaultValues: {
-            systemPromptSonnet: ''
+            systemPromptSonnet: '',
+            userPromptTemplateSonnet: '',
+            assistantPrefillSonnet: ''
         }
     });
 
     const haikuForm = useForm<z.infer<typeof haikuSchema>>({
         resolver: zodResolver(haikuSchema),
         defaultValues: {
-            systemPromptHaiku: ''
+            systemPromptHaiku: '',
+            userPromptTemplateHaiku: '',
+            assistantPrefillHaiku: ''
         }
     });
 
@@ -65,10 +70,14 @@ export default function Settings() {
         if (settings) {
 
             sonnetForm.reset({
-                systemPromptSonnet: settings.systemPromptSonnet || ''
+                systemPromptSonnet: settings.systemPromptSonnet || '',
+                userPromptTemplateSonnet: settings.userPromptTemplateSonnet || '',
+                assistantPrefillSonnet: settings.assistantPrefillSonnet || ''
             });
             haikuForm.reset({
-                systemPromptHaiku: settings.systemPromptHaiku || ''
+                systemPromptHaiku: settings.systemPromptHaiku || '',
+                userPromptTemplateHaiku: settings.userPromptTemplateHaiku || '',
+                assistantPrefillHaiku: settings.assistantPrefillHaiku || ''
             });
         }
     }, [settings]);
@@ -84,7 +93,9 @@ export default function Settings() {
         try {
             setIsUpdating(true);
             const formattedValues = {
-                systemPromptSonnet: values.systemPromptSonnet.replace(/\n/g, '\n')
+                systemPromptSonnet: values.systemPromptSonnet.replace(/\n/g, '\n'),
+                userPromptTemplateSonnet: values.userPromptTemplateSonnet.replace(/\n/g, '\n'),
+                assistantPrefillSonnet: values.assistantPrefillSonnet.replace(/\n/g, '\n')
             };
 
             const response = await fetch(`${BACKEND_URL}/api/settings/system-prompt-sonnet`, {
@@ -115,7 +126,9 @@ export default function Settings() {
         try {
             setIsUpdating(true);
             const formattedValues = {
-                systemPromptHaiku: values.systemPromptHaiku.replace(/\n/g, '\n')
+                systemPromptHaiku: values.systemPromptHaiku.replace(/\n/g, '\n'),
+                userPromptTemplateHaiku: values.userPromptTemplateHaiku.replace(/\n/g, '\n'),
+                assistantPrefillHaiku: values.assistantPrefillHaiku.replace(/\n/g, '\n')
             };
 
             const response = await fetch(`${BACKEND_URL}/api/settings/system-prompt-haiku`, {
@@ -190,6 +203,74 @@ export default function Settings() {
         }
     };
 
+    async function onUpdateSonnetSettings(values: z.infer<typeof sonnetSchema>) {
+        try {
+            setIsUpdating(true);
+            const updates = [
+                fetch(`${BACKEND_URL}/api/settings/system-prompt-sonnet`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ systemPromptSonnet: values.systemPromptSonnet })
+                }),
+                fetch(`${BACKEND_URL}/api/settings/user-prompt-template-sonnet`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userPromptTemplateSonnet: values.userPromptTemplateSonnet })
+                }),
+                fetch(`${BACKEND_URL}/api/settings/assistant-prefill-sonnet`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ assistantPrefillSonnet: values.assistantPrefillSonnet })
+                })
+            ];
+
+            await Promise.all(updates);
+            const response = await fetch(`${BACKEND_URL}/api/settings`);
+            const data = await response.json();
+            setSettings(data);
+            toast.success('Sonnet settings updated successfully');
+        } catch (error) {
+            console.error(error);
+            toast.error('Failed to update settings');
+        } finally {
+            setIsUpdating(false);
+        }
+    }
+
+    async function onUpdateHaikuSettings(values: z.infer<typeof haikuSchema>) {
+        try {
+            setIsUpdating(true);
+            const updates = [
+                fetch(`${BACKEND_URL}/api/settings/system-prompt-haiku`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ systemPromptHaiku: values.systemPromptHaiku })
+                }),
+                fetch(`${BACKEND_URL}/api/settings/user-prompt-template-haiku`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userPromptTemplateHaiku: values.userPromptTemplateHaiku })
+                }),
+                fetch(`${BACKEND_URL}/api/settings/assistant-prefill-haiku`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ assistantPrefillHaiku: values.assistantPrefillHaiku })
+                })
+            ];
+
+            await Promise.all(updates);
+            const response = await fetch(`${BACKEND_URL}/api/settings`);
+            const data = await response.json();
+            setSettings(data);
+            toast.success('Haiku settings updated successfully');
+        } catch (error) {
+            console.error(error);
+            toast.error('Failed to update settings');
+        } finally {
+            setIsUpdating(false);
+        }
+    }
+
     return (
         <div className="flex flex-col h-full w-full p-3">
             <Tabs defaultValue="system-prompt-sonnet">
@@ -200,40 +281,77 @@ export default function Settings() {
                 </TabsList>
 
                 <TabsContent value="system-prompt-sonnet">
-                    <div className="flex flex-col gap-3">
+                    <div className="flex flex-col gap-3 h-[calc(100vh-120px)] overflow-y-auto">
                         <Card>
                             <CardHeader>
                                 <CardTitle>Chatbot System Prompt Settings - Sonnet</CardTitle>
                             </CardHeader>
                             <CardContent className="flex flex-col gap-3">
                                 <Form {...sonnetForm}>
-                                    <div className="flex flex-col gap-3">
-                                        <span className="text-sm font-bold">
-                                            Current system prompt - Sonnet:
-                                        </span>
-                                        <span className="text-sm whitespace-pre-wrap max-h-[320px] bg-slate-100 overflow-y-auto border rounded p-2">
-                                            {settings?.systemPromptSonnet}
-                                        </span>
-                                    </div>
-                                    <form
-                                        className="flex flex-col gap-3"
-                                        onSubmit={sonnetForm.handleSubmit(onUpdateSystemPromptSonnet)}>
-                                        <FormField
-                                            control={sonnetForm.control}
-                                            name="systemPromptSonnet"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Update system prompt</FormLabel>
-                                                    <FormControl>
-                                                        <Textarea {...field} rows={20}/>
-                                                    </FormControl>
-                                                </FormItem>
-                                            )}
-                                        />
-                                        <div className="flex justify-between gap-2">
-                                            <Button type="button" variant="outline" onClick={loadCurrentPromptSonnet}>
-                                                Load current prompt
-                                            </Button>
+                                    <form className="flex flex-col gap-3" onSubmit={sonnetForm.handleSubmit(onUpdateSonnetSettings)}>
+                                        <div className="space-y-4">
+                                            {/* System Prompt */}
+                                            <div>
+                                                <span className="text-sm font-bold">Current system prompt:</span>
+                                                <span className="text-sm whitespace-pre-wrap h-[350px] bg-slate-100 overflow-y-auto border rounded p-2 block">
+                                                    {settings?.systemPromptSonnet}
+                                                </span>
+                                                <FormField
+                                                    control={sonnetForm.control}
+                                                    name="systemPromptSonnet"
+                                                    render={({ field }) => (
+                                                        <FormItem>
+                                                            <FormLabel>Update system prompt</FormLabel>
+                                                            <FormControl>
+                                                                <Textarea {...field} className="h-[350px]" />
+                                                            </FormControl>
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                            </div>
+
+                                            {/* User Prompt Template */}
+                                            <div>
+                                                <span className="text-sm font-bold">Current user prompt template:</span>
+                                                <span className="text-sm whitespace-pre-wrap h-[350px] bg-slate-100 overflow-y-auto border rounded p-2 block">
+                                                    {settings?.userPromptTemplateSonnet}
+                                                </span>
+                                                <FormField
+                                                    control={sonnetForm.control}
+                                                    name="userPromptTemplateSonnet"
+                                                    render={({ field }) => (
+                                                        <FormItem>
+                                                            <FormLabel>Update user prompt template</FormLabel>
+                                                            <FormControl>
+                                                                <Textarea {...field} className="h-[350px]" />
+                                                            </FormControl>
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                            </div>
+
+                                            {/* Assistant Prefill */}
+                                            <div>
+                                                <span className="text-sm font-bold">Current assistant prefill:</span>
+                                                <span className="text-sm whitespace-pre-wrap h-[350px] bg-slate-100 overflow-y-auto border rounded p-2 block">
+                                                    {settings?.assistantPrefillSonnet}
+                                                </span>
+                                                <FormField
+                                                    control={sonnetForm.control}
+                                                    name="assistantPrefillSonnet"
+                                                    render={({ field }) => (
+                                                        <FormItem>
+                                                            <FormLabel>Update assistant prefill</FormLabel>
+                                                            <FormControl>
+                                                                <Textarea {...field} className="h-[350px]" />
+                                                            </FormControl>
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="flex justify-end gap-2 sticky bottom-0 bg-white p-4 border-t">
                                             <Button type="submit" disabled={isUpdating}>
                                                 {isUpdating ? (
                                                     <>
@@ -241,7 +359,7 @@ export default function Settings() {
                                                         Updating...
                                                     </>
                                                 ) : (
-                                                    "Update system prompt"
+                                                    "Update all settings"
                                                 )}
                                             </Button>
                                         </div>
@@ -252,41 +370,77 @@ export default function Settings() {
                     </div>
                 </TabsContent>
                 <TabsContent value="system-prompt-haiku">
-                    <div className="flex flex-col gap-3">
+                    <div className="flex flex-col gap-3 h-[calc(100vh-120px)] overflow-y-auto">
                         <Card>
                             <CardHeader>
                                 <CardTitle>Chatbot System Prompt Settings - Haiku</CardTitle>
                             </CardHeader>
                             <CardContent className="flex flex-col gap-3">
-
                                 <Form {...haikuForm}>
-                                    <div className="flex flex-col gap-3">
-                                        <span className="text-sm font-bold">
-                                            Current system prompt - Haiku:
-                                        </span>
-                                        <span className="text-sm whitespace-pre-wrap max-h-[320px] bg-slate-100 overflow-y-auto border rounded p-2">
-                                            {settings?.systemPromptHaiku}
-                                        </span>
-                                    </div>
-                                    <form
-                                        className="flex flex-col gap-3"
-                                        onSubmit={haikuForm.handleSubmit(onUpdateSystemPromptHaiku)}>
-                                        <FormField
-                                            control={haikuForm.control}
-                                            name="systemPromptHaiku"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Update system prompt</FormLabel>
-                                                    <FormControl>
-                                                        <Textarea {...field} rows={20}/>
-                                                    </FormControl>
-                                                </FormItem>
-                                            )}
-                                        />
-                                        <div className="flex justify-between gap-2">
-                                            <Button type="button" variant="outline" onClick={loadCurrentPromptHaiku}>
-                                                Load current prompt
-                                            </Button>
+                                    <form className="flex flex-col gap-3" onSubmit={haikuForm.handleSubmit(onUpdateHaikuSettings)}>
+                                        <div className="space-y-4">
+                                            {/* System Prompt */}
+                                            <div>
+                                                <span className="text-sm font-bold">Current system prompt:</span>
+                                                <span className="text-sm whitespace-pre-wrap h-[350px] bg-slate-100 overflow-y-auto border rounded p-2 block">
+                                                    {settings?.systemPromptHaiku}
+                                                </span>
+                                                <FormField
+                                                    control={haikuForm.control}
+                                                    name="systemPromptHaiku"
+                                                    render={({ field }) => (
+                                                        <FormItem>
+                                                            <FormLabel>Update system prompt</FormLabel>
+                                                            <FormControl>
+                                                                <Textarea {...field} className="h-[350px]" />
+                                                            </FormControl>
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                            </div>
+
+                                            {/* User Prompt Template */}
+                                            <div>
+                                                <span className="text-sm font-bold">Current user prompt template:</span>
+                                                <span className="text-sm whitespace-pre-wrap h-[350px] bg-slate-100 overflow-y-auto border rounded p-2 block">
+                                                    {settings?.userPromptTemplateHaiku}
+                                                </span>
+                                                <FormField
+                                                    control={haikuForm.control}
+                                                    name="userPromptTemplateHaiku"
+                                                    render={({ field }) => (
+                                                        <FormItem>
+                                                            <FormLabel>Update user prompt template</FormLabel>
+                                                            <FormControl>
+                                                                <Textarea {...field} className="h-[350px]" />
+                                                            </FormControl>
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                            </div>
+
+                                            {/* Assistant Prefill */}
+                                            <div>
+                                                <span className="text-sm font-bold">Current assistant prefill:</span>
+                                                <span className="text-sm whitespace-pre-wrap h-[350px] bg-slate-100 overflow-y-auto border rounded p-2 block">
+                                                    {settings?.assistantPrefillHaiku}
+                                                </span>
+                                                <FormField
+                                                    control={haikuForm.control}
+                                                    name="assistantPrefillHaiku"
+                                                    render={({ field }) => (
+                                                        <FormItem>
+                                                            <FormLabel>Update assistant prefill</FormLabel>
+                                                            <FormControl>
+                                                                <Textarea {...field} className="h-[350px]" />
+                                                            </FormControl>
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="flex justify-end gap-2 sticky bottom-0 bg-white p-4 border-t">
                                             <Button type="submit" disabled={isUpdating}>
                                                 {isUpdating ? (
                                                     <>
@@ -294,7 +448,7 @@ export default function Settings() {
                                                         Updating...
                                                     </>
                                                 ) : (
-                                                    "Update system prompt"
+                                                    "Update all settings"
                                                 )}
                                             </Button>
                                         </div>
