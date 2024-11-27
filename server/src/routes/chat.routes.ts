@@ -12,13 +12,7 @@ const computeCost = (llm: string, data: any) => {
     let input_tokens_cost = 0;
     let output_tokens_cost = 0;
 
-    if (llm === "gpt-4o-mini-2024-07-18") {
-        input_tokens_cost = 0.15 / 1000000;
-        output_tokens_cost = 0.6 / 1000000;
-    } else if (llm === "gpt-4o-2024-08-06") {
-        input_tokens_cost = 2.5 / 1000000;
-        output_tokens_cost = 10 / 1000000;
-    } else if (llm === "claude-3-5-sonnet-20241022") {
+    if (llm === "claude-3-5-sonnet-20241022") {
         input_tokens_cost = 3.0 / 1000000;
         output_tokens_cost = 15 / 1000000;
     } else if (llm === "claude-3-5-haiku-20241022") {
@@ -347,7 +341,7 @@ const getResponseAnthropic = async (req: Request, res: Response, next: NextFunct
         
         currentMessages.push({
             role: "user",
-            content: userPromptTemplate.replace("${query}", query)
+            content: userPromptTemplate.replace("${user_query}", query)
         });
 
         if (currentMessages.length === 1) {
