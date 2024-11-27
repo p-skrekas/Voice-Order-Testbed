@@ -75,32 +75,34 @@ export default function Chat() {
     }
 
     const parseAIResponse = (xmlString: string) => {
+        console.log('xmlString: ', xmlString)
+
         // Extract content between tags using regex
-        const getTagContent = (tag: string) => {
+        const getTagContent = (tag: string, content: string) => {
             const regex = new RegExp(`<${tag}>(.*?)</${tag}>`, 's');
-            const match = xmlString.match(regex);
+            const match = content.match(regex);
             return match ? match[1].trim() : '';
         };
 
         // Parse order items if they exist
         const parseOrder = () => {
-            const orderContent = getTagContent('order');
+            const orderContent = getTagContent('order', xmlString);
             if (!orderContent) return [];
             
             // Extract all product tags
             const products = orderContent.match(/<product>[\s\S]*?<\/product>/g) || [];
             
             return products.map(product => ({
-                id: Number(getTagContent('id').match(/\d+/)?.[0] || 0),
-                name: getTagContent('name'),
-                quantity: Number(getTagContent('quantity').match(/\d+/)?.[0] || 0),
+                id: Number(getTagContent('id', product)),
+                name: getTagContent('name', product),
+                quantity: Number(getTagContent('quantity', product)),
                 unit: 'pieces' // default unit if not specified
             }));
         };
 
         return {
-            response: getTagContent('ai_response'),
-            order_status: getTagContent('order_status'),
+            response: getTagContent('ai_response', xmlString),
+            order_status: getTagContent('order_status', xmlString),
             order: parseOrder()
         };
     };
