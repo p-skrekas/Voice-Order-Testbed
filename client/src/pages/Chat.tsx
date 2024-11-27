@@ -39,6 +39,10 @@ export default function Chat() {
     const [inputMessage, setInputMessage] = useState('');
     const [isTyping, setIsTyping] = useState(false);
     const [currentModel, setCurrentModel] = useState<string>("");
+    const [totalCostSonnet, setTotalCostSonnet] = useState<number>(0);
+    const [totalCostHaiku, setTotalCostHaiku] = useState<number>(0);
+    const [totalTokensSonnet, setTotalTokensSonnet] = useState<number>(0);
+    const [totalTokensHaiku, setTotalTokensHaiku] = useState<number>(0);
 
     
 
@@ -133,8 +137,8 @@ export default function Chat() {
                 getAnthropicResponseMini(inputMessage.trim(), [...messagesAnthropicMini, userMessage])
             ]);
 
-            let sonnetResponse = null;
-            let haikuResponse = null;
+            let sonnetResponse: Message | null = null;
+            let haikuResponse: Message | null = null;
 
             // Handle Sonnet response
             if (responseAnthropicLarge.status === 'fulfilled' && responseAnthropicLarge.value.ok) {
@@ -200,6 +204,16 @@ export default function Chat() {
 
             setMessagesAnthropicLarge([...messagesAnthropicLarge, userMessage, sonnetResponse]);
             setMessagesAnthropicMini([...messagesAnthropicMini, userMessage, haikuResponse]);
+
+            if (sonnetResponse && !sonnetResponse.error) {
+                setTotalCostSonnet(prev => prev + sonnetResponse!.cost);
+                setTotalTokensSonnet(prev => prev + sonnetResponse!.totalTokens);
+            }
+
+            if (haikuResponse && !haikuResponse.error) {
+                setTotalCostHaiku(prev => prev + haikuResponse!.cost);
+                setTotalTokensHaiku(prev => prev + haikuResponse!.totalTokens);
+            }
 
         } catch (error) {
             console.error("Error in handleSendMessage:", error);
@@ -425,9 +439,9 @@ export default function Chat() {
                             />
                             <button
                                 type="submit"
-                                disabled={isTyping}
+                                disabled={isTyping || !inputMessage.trim()}
                                 className={`px-4 py-2 rounded-lg text-white ${
-                                    isTyping 
+                                    isTyping || !inputMessage.trim()
                                     ? 'bg-blue-300 cursor-not-allowed' 
                                     : 'bg-blue-500 hover:bg-blue-600'
                                 }`}
