@@ -88,7 +88,7 @@ export default function Index() {
                     </CardTitle>
                     <CardDescription>
                         <span>
-                            Modify the prompts for Sonnet and Haiku models.
+                            Modify the prompts for Sonnet and Haiku model and optimize the size of vector search.
                         </span>
                     </CardDescription>
                 </CardHeader>
