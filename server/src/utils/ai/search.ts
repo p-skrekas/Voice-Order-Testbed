@@ -41,6 +41,7 @@ export async function performVectorSearch(
                     units_per_package: 1,
                     main_unit_desc: 1,
                     unit2_desc: 1,
+                    sku: 1,
                     category_name: 1,
                     brand_name: 1,
                     published: 1,

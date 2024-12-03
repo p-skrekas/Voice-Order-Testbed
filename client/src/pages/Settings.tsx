@@ -481,6 +481,7 @@ export default function Settings() {
                                                             </SelectTrigger>
                                                         </FormControl>
                                                         <SelectContent>
+                                                            <SelectItem value="5">5 products</SelectItem>
                                                             <SelectItem value="10">10 products</SelectItem>
                                                             <SelectItem value="20">20 products</SelectItem>
                                                             <SelectItem value="30">30 products</SelectItem>
