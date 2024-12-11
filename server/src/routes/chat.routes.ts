@@ -137,12 +137,23 @@ const getResponseAnthropic = async (req: Request, res: Response, next: NextFunct
     try {
         let currentMessages: AnthropicMessage[] = [...messages];
 
-        const currentProducts: any[] = [];
+        currentMessages.push({
+            role: "user",
+            content: `The current customer's cart is:
+                <current_cart>
+                ${JSON.stringify(currentCart)}
+                </current_cart>
+            `
+        });
+
+        console.log('Current messages (added current cart): ', currentMessages);
 
         currentMessages.push({
             role: "user",
-            content: userPromptTemplate.replace("{{user_query}}", query).replace("{{products}}", JSON.stringify(currentProducts)).replace("{{current_cart}}", JSON.stringify(currentCart))
+            content: userPromptTemplate.replace("{{user_query}}", query)
         });
+
+        console.log('Current messages: ', currentMessages);
 
 
         let response = await createAnthropicAPIMessage(llm, systemPrompt, currentMessages, toolsAnthropic);

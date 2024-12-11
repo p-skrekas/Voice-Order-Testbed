@@ -15,10 +15,7 @@ interface Message {
     responseTime?: number;
     order?: {
         id: number;
-        name: string;
         quantity: number;
-        unit: string;
-        sku?: string;
     }[];
     modelName?: string;
     orderStatus?: string;
@@ -42,6 +39,8 @@ export default function Chat() {
     const [totalCostSonnet, setTotalCostSonnet] = useState<number>(0);
     const [totalTokensSonnet, setTotalTokensSonnet] = useState<number>(0);
 
+    const [currentCart, setCurrentCart] = useState<any[]>([{id: 3, quantity: 10}, {id: 17, quantity: 90}]);
+
     
 
     const getAnthropicResponseLarge = async (query: string, messages: Message[]) => {
@@ -54,13 +53,7 @@ export default function Chat() {
                 llm: "claude-3-5-sonnet-20241022",
                 query: query,
                 messages: messages,
-                currentCart: messages
-                    .filter(msg => msg.modelName === "Claude 3.5 Sonnet" && msg.order)
-                    .flatMap(msg => msg.order || [])
-                    .map(item => ({
-                        id: item.id,
-                        quantity: item.quantity
-                    }))
+                currentCart: currentCart
             }),
         });
 
@@ -87,10 +80,7 @@ export default function Chat() {
             
             return products.map(product => ({
                 id: Number(getTagContent('id', product)),
-                name: getTagContent('name', product),
-                quantity: Number(getTagContent('quantity', product)),
-                unit: 'pieces', // default unit if not specified
-                sku: getTagContent('sku', product) || undefined // Add SKU extraction here
+                quantity: Number(getTagContent('quantity', product))
             }));
         };
 
@@ -126,16 +116,29 @@ export default function Chat() {
 
             if (responseAnthropicLarge.ok) {
                 const dataAnthropicLarge = await responseAnthropicLarge.json();
+                const parsedResponse = parseAIResponse(dataAnthropicLarge.aiResponse);
+                
+                // Update the cart when new orders are received
+                if (parsedResponse.order && parsedResponse.order.length > 0) {
+                    // Create a new cart from the parsed response
+                    const newCart = parsedResponse.order.map(item => ({
+                        id: item.id,
+                        quantity: item.quantity
+                    }));
+                    
+                    setCurrentCart(newCart);
+                }
+
                 sonnetResponse = {
                     role: "assistant",
-                    content: parseAIResponse(dataAnthropicLarge.aiResponse).response,
+                    content: parsedResponse.response,
                     promptTokens: dataAnthropicLarge.promptTokens,
                     completionTokens: dataAnthropicLarge.completionTokens,
                     totalTokens: dataAnthropicLarge.totalTokens,
                     cost: dataAnthropicLarge.cost,
                     responseTime: dataAnthropicLarge.responseTime,
-                    order: parseAIResponse(dataAnthropicLarge.aiResponse).order,
-                    orderStatus: parseAIResponse(dataAnthropicLarge.aiResponse).order_status,
+                    order: parsedResponse.order,
+                    orderStatus: parsedResponse.order_status,
                     modelName: "Claude 3.5 Sonnet"
                 };
             } else {
@@ -175,6 +178,45 @@ export default function Chat() {
 
     return (
         <div className="flex flex-col h-screen">
+            {/* Add Cart Summary */}
+            {currentCart.length > 0 && (
+                <div className="bg-white border-b p-4">
+                    <div className="flex items-center justify-between">
+                        <h3 className="font-semibold">Current Cart ({currentCart.length} items)</h3>
+                        <Dialog>
+                            <DialogTrigger asChild>
+                                <Button variant="outline" size="sm">
+                                    <ShoppingCart className="mr-2 h-4 w-4" />
+                                    View Cart
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                                <DialogHeader>
+                                    <DialogTitle>Shopping Cart</DialogTitle>
+                                </DialogHeader>
+                                <div className="grid gap-4">
+                                    {currentCart.map((item, index) => (
+                                        <div key={index} className="flex justify-between items-center p-2 border rounded">
+                                            <div className="text-sm text-gray-500">ID: {item.id}</div>
+                                            <div className="text-sm">
+                                                Qty: {item.quantity}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                                <DialogFooter>
+                                    <Button 
+                                        variant="destructive" 
+                                        onClick={() => setCurrentCart([])}
+                                    >
+                                        Clear Cart
+                                    </Button>
+                                </DialogFooter>
+                            </DialogContent>
+                        </Dialog>
+                    </div>
+                </div>
+            )}
 
             <div className="flex h-full flex-row gap-1 overflow-y-auto p-4 ">    
                 {/* Chat messages container */}
@@ -241,7 +283,7 @@ export default function Chat() {
                                                                             <div className="grid gap-4 overflow-y-auto max-h-[60vh] pr-2">
                                                                                 {message.order.map((item, idx) => (
                                                                                     <div key={idx} className="p-2 border rounded">
-                                                                                        <div className="font-medium">{item.name}</div>
+
                                                                                         <div className="flex justify-between text-sm text-gray-500">
                                                                                             <span>ID: {item.id}</span>
                                                                                             <span>Qty: {item.quantity}</span>
