@@ -27,28 +27,6 @@ const getSettings: RequestHandler = async (req, res, next) => {
 
 
 
-const updateSystemPromptSonnet: RequestHandler = async (req, res, next) => {
-    try {
-        const { systemPromptSonnet } = req.body;
-
-        let settings = await SettingsModel.findOne();
-        if (!settings) {
-            settings = new SettingsModel({
-                systemPromptSonnet: systemPromptSonnet
-            });
-        } else {
-            settings.systemPromptSonnet = systemPromptSonnet;
-        }
-
-        await settings.save();
-        res.status(200).json(settings);
-    } catch (error) {
-        console.error('Update error:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        next(new HttpError(`Failed to update settings: ${errorMessage}`, 500));
-    }
-}
-
 const updateUserPromptTemplateSonnet: RequestHandler = async (req, res, next) => {
     try {
         const { userPromptTemplateSonnet } = req.body;
@@ -71,53 +49,6 @@ const updateUserPromptTemplateSonnet: RequestHandler = async (req, res, next) =>
     }
 }
 
-const updateAssistantPrefillSonnet: RequestHandler = async (req, res, next) => {
-    try {
-        const { assistantPrefillSonnet } = req.body;
-
-        let settings = await SettingsModel.findOne();
-        if (!settings) {
-            settings = new SettingsModel({
-                assistantPrefillSonnet: assistantPrefillSonnet
-            });
-        } else {
-            settings.assistantPrefillSonnet = assistantPrefillSonnet;
-        }
-
-        await settings.save();
-        res.status(200).json(settings);
-    } catch (error) {
-        console.error('Update error:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        next(new HttpError(`Failed to update settings: ${errorMessage}`, 500));
-    }
-}
-
-
-
-const updateSystemPromptHaiku: RequestHandler = async (req, res, next) => {
-    try {
-        const { systemPromptHaiku } = req.body;
-
-        let settings = await SettingsModel.findOne();
-        if (!settings) {
-            settings = new SettingsModel({
-                systemPromptHaiku: systemPromptHaiku
-            });
-        } else {
-            settings.systemPromptHaiku = systemPromptHaiku;
-        }
-
-        await settings.save();
-        res.status(200).json(settings);
-    } catch (error) {
-        console.error('Update error:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        next(new HttpError(`Failed to update settings: ${errorMessage}`, 500));
-    }
-}
-
-
 const updateUserPromptTemplateHaiku: RequestHandler = async (req, res, next) => {
     try {
         const { userPromptTemplateHaiku } = req.body;
@@ -129,6 +60,28 @@ const updateUserPromptTemplateHaiku: RequestHandler = async (req, res, next) => 
             });
         } else {
             settings.userPromptTemplateHaiku = userPromptTemplateHaiku;
+        }
+
+        await settings.save();
+        res.status(200).json(settings);
+    } catch (error) {
+        console.error('Update error:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        next(new HttpError(`Failed to update settings: ${errorMessage}`, 500));
+    }
+}
+
+const updateAssistantPrefillSonnet: RequestHandler = async (req, res, next) => {
+    try {
+        const { assistantPrefillSonnet } = req.body;
+
+        let settings = await SettingsModel.findOne();
+        if (!settings) {
+            settings = new SettingsModel({
+                assistantPrefillSonnet: assistantPrefillSonnet
+            });
+        } else {
+            settings.assistantPrefillSonnet = assistantPrefillSonnet;
         }
 
         await settings.save();
@@ -186,11 +139,9 @@ const updateVectorSearchSettings: RequestHandler = async (req, res, next) => {
 
 router.get("/", getSettings);
 
-router.put("/system-prompt-sonnet", updateSystemPromptSonnet);
 router.put("/user-prompt-template-sonnet", updateUserPromptTemplateSonnet);
 router.put("/assistant-prefill-sonnet", updateAssistantPrefillSonnet);
 
-router.put("/system-prompt-haiku", updateSystemPromptHaiku);
 router.put("/user-prompt-template-haiku", updateUserPromptTemplateHaiku);
 router.put("/assistant-prefill-haiku", updateAssistantPrefillHaiku);
 

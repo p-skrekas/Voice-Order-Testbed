@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { TSettings } from "../types/settings";
-import { Card, CardContent, CardDescription, CardTitle, CardFooter, CardHeader } from "../components/ui/card";
+import { Card, CardContent, CardDescription, CardTitle, CardHeader } from "../components/ui/card";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Textarea } from "../components/ui/textarea";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "../components/ui/form";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel } from "../components/ui/form";
 import { Button } from "../components/ui/button";
 import { Loader2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
@@ -20,13 +20,11 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 const sonnetSchema = z.object({
-    systemPromptSonnet: z.string().min(1, { message: "System prompt is required." }),
     userPromptTemplateSonnet: z.string().min(1, { message: "User prompt template is required." }),
     assistantPrefillSonnet: z.string().min(1, { message: "Assistant prefill is required." })
 });
 
 const haikuSchema = z.object({
-    systemPromptHaiku: z.string().min(1, { message: "System prompt is required." }),
     userPromptTemplateHaiku: z.string().min(1, { message: "User prompt template is required." }),
     assistantPrefillHaiku: z.string().min(1, { message: "Assistant prefill is required." })
 });
@@ -44,7 +42,6 @@ export default function Settings() {
     const sonnetForm = useForm<z.infer<typeof sonnetSchema>>({
         resolver: zodResolver(sonnetSchema),
         defaultValues: {
-            systemPromptSonnet: '',
             userPromptTemplateSonnet: '',
             assistantPrefillSonnet: ''
         }
@@ -53,7 +50,6 @@ export default function Settings() {
     const haikuForm = useForm<z.infer<typeof haikuSchema>>({
         resolver: zodResolver(haikuSchema),
         defaultValues: {
-            systemPromptHaiku: '',
             userPromptTemplateHaiku: '',
             assistantPrefillHaiku: ''
         }
@@ -68,14 +64,11 @@ export default function Settings() {
 
     useEffect(() => {
         if (settings) {
-
             sonnetForm.reset({
-                systemPromptSonnet: settings.systemPromptSonnet || '',
                 userPromptTemplateSonnet: settings.userPromptTemplateSonnet || '',
                 assistantPrefillSonnet: settings.assistantPrefillSonnet || ''
             });
             haikuForm.reset({
-                systemPromptHaiku: settings.systemPromptHaiku || '',
                 userPromptTemplateHaiku: settings.userPromptTemplateHaiku || '',
                 assistantPrefillHaiku: settings.assistantPrefillHaiku || ''
             });
@@ -93,7 +86,6 @@ export default function Settings() {
         try {
             setIsUpdating(true);
             const formattedValues = {
-                systemPromptSonnet: values.systemPromptSonnet.replace(/\n/g, '\n'),
                 userPromptTemplateSonnet: values.userPromptTemplateSonnet.replace(/\n/g, '\n'),
                 assistantPrefillSonnet: values.assistantPrefillSonnet.replace(/\n/g, '\n')
             };
@@ -126,7 +118,6 @@ export default function Settings() {
         try {
             setIsUpdating(true);
             const formattedValues = {
-                systemPromptHaiku: values.systemPromptHaiku.replace(/\n/g, '\n'),
                 userPromptTemplateHaiku: values.userPromptTemplateHaiku.replace(/\n/g, '\n'),
                 assistantPrefillHaiku: values.assistantPrefillHaiku.replace(/\n/g, '\n')
             };
@@ -191,27 +182,10 @@ export default function Settings() {
 
 
 
-    const loadCurrentPromptSonnet = () => {
-        if (settings?.systemPromptSonnet) {
-            sonnetForm.setValue('systemPromptSonnet', settings.systemPromptSonnet);
-        }
-    };
-
-    const loadCurrentPromptHaiku = () => {
-        if (settings?.systemPromptHaiku) {
-            haikuForm.setValue('systemPromptHaiku', settings.systemPromptHaiku);
-        }
-    };
-
     async function onUpdateSonnetSettings(values: z.infer<typeof sonnetSchema>) {
         try {
             setIsUpdating(true);
             const updates = [
-                fetch(`${BACKEND_URL}/api/settings/system-prompt-sonnet`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ systemPromptSonnet: values.systemPromptSonnet })
-                }),
                 fetch(`${BACKEND_URL}/api/settings/user-prompt-template-sonnet`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
@@ -241,11 +215,6 @@ export default function Settings() {
         try {
             setIsUpdating(true);
             const updates = [
-                fetch(`${BACKEND_URL}/api/settings/system-prompt-haiku`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ systemPromptHaiku: values.systemPromptHaiku })
-                }),
                 fetch(`${BACKEND_URL}/api/settings/user-prompt-template-haiku`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
@@ -290,26 +259,6 @@ export default function Settings() {
                                 <Form {...sonnetForm}>
                                     <form className="flex flex-col gap-3" onSubmit={sonnetForm.handleSubmit(onUpdateSonnetSettings)}>
                                         <div className="space-y-4">
-                                            {/* System Prompt */}
-                                            <div>
-                                                <span className="text-sm font-bold">Current system prompt:</span>
-                                                <span className="text-sm whitespace-pre-wrap h-[350px] bg-slate-100 overflow-y-auto border rounded p-2 block">
-                                                    {settings?.systemPromptSonnet}
-                                                </span>
-                                                <FormField
-                                                    control={sonnetForm.control}
-                                                    name="systemPromptSonnet"
-                                                    render={({ field }) => (
-                                                        <FormItem>
-                                                            <FormLabel>Update system prompt</FormLabel>
-                                                            <FormControl>
-                                                                <Textarea {...field} className="h-[350px]" />
-                                                            </FormControl>
-                                                        </FormItem>
-                                                    )}
-                                                />
-                                            </div>
-
                                             {/* User Prompt Template */}
                                             <div>
                                                 <span className="text-sm font-bold">Current user prompt template:</span>
@@ -379,26 +328,6 @@ export default function Settings() {
                                 <Form {...haikuForm}>
                                     <form className="flex flex-col gap-3" onSubmit={haikuForm.handleSubmit(onUpdateHaikuSettings)}>
                                         <div className="space-y-4">
-                                            {/* System Prompt */}
-                                            <div>
-                                                <span className="text-sm font-bold">Current system prompt:</span>
-                                                <span className="text-sm whitespace-pre-wrap h-[350px] bg-slate-100 overflow-y-auto border rounded p-2 block">
-                                                    {settings?.systemPromptHaiku}
-                                                </span>
-                                                <FormField
-                                                    control={haikuForm.control}
-                                                    name="systemPromptHaiku"
-                                                    render={({ field }) => (
-                                                        <FormItem>
-                                                            <FormLabel>Update system prompt</FormLabel>
-                                                            <FormControl>
-                                                                <Textarea {...field} className="h-[350px]" />
-                                                            </FormControl>
-                                                        </FormItem>
-                                                    )}
-                                                />
-                                            </div>
-
                                             {/* User Prompt Template */}
                                             <div>
                                                 <span className="text-sm font-bold">Current user prompt template:</span>

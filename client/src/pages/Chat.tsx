@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Mic, Barcode, ShoppingCart, Timer, Banknote } from "lucide-react";
+import { ShoppingCart, Timer, Banknote } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "../components/ui/dialog";
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
@@ -39,7 +39,9 @@ export default function Chat() {
     const [totalCostSonnet, setTotalCostSonnet] = useState<number>(0);
     const [totalTokensSonnet, setTotalTokensSonnet] = useState<number>(0);
 
-    const [currentCart, setCurrentCart] = useState<any[]>([{id: 3, quantity: 10}, {id: 17, quantity: 90}]);
+    const [currentCart, setCurrentCart] = useState<any[]>([{id: 3, quantity: 10}, {id: 7, quantity: 90}]);
+    const [newProductId, setNewProductId] = useState<number | ''>('');
+    const [newProductQuantity, setNewProductQuantity] = useState<number | ''>('');
 
     
 
@@ -50,6 +52,7 @@ export default function Chat() {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
+                // llm: "claude-3-5-haiku-20241022",
                 llm: "claude-3-5-sonnet-20241022",
                 query: query,
                 messages: messages,
@@ -176,6 +179,14 @@ export default function Chat() {
         </div>
     );
 
+    const addProductToCart = () => {
+        if (newProductId !== '' && newProductQuantity !== '') {
+            setCurrentCart([...currentCart, { id: newProductId, quantity: newProductQuantity }]);
+            setNewProductId('');
+            setNewProductQuantity('');
+        }
+    };
+
     return (
         <div className="flex flex-col h-screen">
             {/* Add Cart Summary */}
@@ -193,6 +204,9 @@ export default function Chat() {
                             <DialogContent>
                                 <DialogHeader>
                                     <DialogTitle>Shopping Cart</DialogTitle>
+                                    <DialogDescription>
+                                        Your current shopping cart items. These items will be referenced in your conversation with the AI.
+                                    </DialogDescription>
                                 </DialogHeader>
                                 <div className="grid gap-4">
                                     {currentCart.map((item, index) => (
@@ -203,6 +217,25 @@ export default function Chat() {
                                             </div>
                                         </div>
                                     ))}
+                                </div>
+                                <div className="flex gap-2 mt-4">
+                                    <input
+                                        type="number"
+                                        value={newProductId}
+                                        onChange={(e) => setNewProductId(Number(e.target.value))}
+                                        placeholder="Product ID"
+                                        className="flex-1 text-sm rounded-lg border p-2 focus:outline-none focus:border-blue-500"
+                                    />
+                                    <input
+                                        type="number"
+                                        value={newProductQuantity}
+                                        onChange={(e) => setNewProductQuantity(Number(e.target.value))}
+                                        placeholder="Quantity"
+                                        className="flex-1 text-sm rounded-lg border p-2 focus:outline-none focus:border-blue-500"
+                                    />
+                                    <Button onClick={addProductToCart} variant="outline" size="sm">
+                                        Add Product
+                                    </Button>
                                 </div>
                                 <DialogFooter>
                                     <Button 
