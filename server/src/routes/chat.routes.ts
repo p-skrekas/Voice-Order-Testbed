@@ -2,6 +2,7 @@ import express, { Router, Response, Request, NextFunction, RequestHandler } from
 import SettingsModel from "../models/settings/settings.schema";
 import { toolsOpenAI, toolsAnthropic } from "../utils/ai/tools";
 import { performVectorSearch } from "../utils/ai/search";
+// import { BedrockRuntimeClient, InvokeModelCommand } from "@aws-sdk/client-bedrock-runtime";
 
 const router = Router();
 
@@ -9,19 +10,16 @@ if (!process.env.ANTHROPIC_API_KEY) {
     throw new Error('ANTHROPIC_API_KEY is not defined in the environment variables');
 }
 
+// const bedrockClient = new BedrockRuntimeClient({
+//     region: process.env.AWS_REGION
+// });
 
 // Function to compute the cost of the response for all models
 const computeCost = (llm: string, data: any) => {
     let input_tokens_cost = 0;
     let output_tokens_cost = 0;
 
-    if (llm === "gpt-4o-mini-2024-07-18") {
-        input_tokens_cost = 0.15 / 1000000;
-        output_tokens_cost = 0.6 / 1000000;
-    } else if (llm === "gpt-4o-2024-08-06") {
-        input_tokens_cost = 2.5 / 1000000;
-        output_tokens_cost = 10 / 1000000;
-    } else if (llm === "claude-3-5-sonnet-20241022") {
+    if (llm === "claude-3-5-sonnet-20241022") {
         input_tokens_cost = 3.0 / 1000000;
         output_tokens_cost = 15 / 1000000;
     } else if (llm === "claude-3-5-haiku-20241022") {
@@ -31,213 +29,6 @@ const computeCost = (llm: string, data: any) => {
 
     return (data.usage.prompt_tokens * input_tokens_cost) + (data.usage.completion_tokens * output_tokens_cost);
 }
-
-
-// ------------------------------------------
-// ---               OPENAI               ---
-// ------------------------------------------
-
-// Request type for OpenAI
-type GetOpenAIResponseRequest = Request & {
-    messages: { role: string, content: string, tool_call_id?: string, name?: string }[];
-    llm: string;
-    query: string;
-}
-
-
-// Response schema for OpenAI
-const responseSchema = {
-    type: "json_schema",
-    json_schema: {
-        name: "Response",
-        schema: {
-            type: "object",
-            properties: {
-                response: {
-                    type: "string",
-                    description: "The final response from the assistant"
-                },
-                order: {
-                    type: "array",
-                    items: {
-                        type: "object",
-                        properties: {
-                            productId: { 
-                                type: "string",
-                                description: "The id of the product"
-                            },
-                            productName: {
-                                type: "string",
-                                description: "The name of the product"
-                            },
-                            productDescription: {
-                                type: "string",
-                                description: "The description of the product"
-                            },
-                            productPrice: { type: "number" }
-                        },
-                        required: ["productId", "productName", "productDescription", "productPrice"],
-                        additionalProperties: false
-                    }
-                }
-            },
-            required: ["response", "order"],
-            additionalProperties: false
-        },
-        strict: true
-    }
-};
-
-// Function to get the response from OpenAI
-const getOpenAIResponse = async (req: GetOpenAIResponseRequest, res: Response, next: NextFunction) => {
-
-    try {
-        let cleanedProducts: any[] = [];
-
-        const { llm, query, messages } = req.body as GetOpenAIResponseRequest;
-
-
-        if (messages.length === 0) {
-            return res.status(400).json({ error: 'No messages provided' });
-        }
-
-        const settings = await SettingsModel.findOne();
-
-        if (!settings) {
-            return res.status(400).json({ error: 'Settings not found' });
-        }
-
-        if (!settings.systemPromptOpenAILarge) {
-            return res.status(400).json({ error: 'System prompt not found' });
-        }
-
-        let systemPrompt = "";
-        if (llm === "gpt-4o-mini-2024-07-18") {
-            systemPrompt = settings.systemPromptOpenAIMini;
-        } else if (llm === "gpt-4o-2024-08-06") {
-            systemPrompt = settings.systemPromptOpenAILarge;
-        }
-
-        // Add system message if not present
-        if (messages.length === 0 || messages[0].role !== "system") {
-            messages.unshift({
-                role: "system",
-                content: systemPrompt
-            });
-        }
-
-        const startTime = Date.now();
-        // Get response from OpenAI
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
-            },
-            body: JSON.stringify({
-                model: llm,
-                messages: messages,
-                tools: toolsOpenAI,
-                temperature: 0,
-                response_format: responseSchema
-            })
-        });
-
-        const data = await response.json();
-
-        // If the response is a tool call
-        if (data.choices[0].finish_reason === "tool_calls") {
-            const toolCall = data.choices[0].message.tool_calls[0];
-
-            if (toolCall.function.name === "searchProducts") {
-                const products = await performVectorSearch("products", "default", query, 20);
-                cleanedProducts = products.map(product => {
-                    const { score, published, ...rest } = product;
-                    return rest;
-                });
-
-                // Add the tool's message with the correct tool_call_id from the assistant's message
-                messages.push({
-                    role: "function",
-                    name: toolCall.function.name,
-                    content: JSON.stringify(cleanedProducts),
-                    tool_call_id: toolCall.id
-                });
-            }
-
-            const responsewithTools = await fetch('https://api.openai.com/v1/chat/completions', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
-                },
-                body: JSON.stringify({
-                    model: llm,
-                    messages: messages,
-                    tools: toolsOpenAI
-                })
-            });
-
-            const dataWithTools = await responsewithTools.json();
-            const responseMessage = dataWithTools.choices[0].message.content;
-
-            messages.push({
-                role: "assistant",
-                content: responseMessage
-            });
-
-            const responseTime = Date.now() - startTime;
-            const cost = computeCost(llm, dataWithTools);
-            return res.status(200).json({
-                aiResponse: responseMessage,
-                messages: messages,
-                promptTokens: dataWithTools.usage.prompt_tokens,
-                completionTokens: dataWithTools.usage.completion_tokens,
-                totalTokens: dataWithTools.usage.total_tokens,
-                cost: cost,
-                products: JSON.stringify(cleanedProducts),
-                responseTime,
-                llm,
-                orderStatus: dataWithTools.choices[0].message.content.order_status
-            });
-        }
-
-        // If we get here, it means it wasn't a tool call
-        if (!data.choices || data.choices.length === 0) {
-            return res.status(400).json({ error: 'No response from OpenAI' });
-        }
-
-        const responseMessage = data.choices[0].message.content;
-
-        console.log('Response message: \n', responseMessage);
-
-        if (!responseMessage) {
-            return res.status(400).json({ error: 'No response from OpenAI' });
-        }
-
-        messages.push({
-            role: "assistant",
-            content: responseMessage
-        });
-
-        const cost = computeCost(llm, data);
-        const responseTime = Date.now() - startTime;
-        return res.status(200).json({
-            aiResponse: responseMessage,
-            messages: messages,
-            promptTokens: data.usage.prompt_tokens,
-            completionTokens: data.usage.completion_tokens,
-            totalTokens: data.usage.total_tokens,
-            cost: cost,
-            products: JSON.stringify(cleanedProducts),
-            responseTime,
-            llm,
-            orderStatus: data.choices[0].message.content.order_status
-        });
-    } catch (error) {
-        next(error);
-    }
-};
 
 
 // ------------------------------------------
@@ -281,6 +72,7 @@ type GetAnthropicResponseRequest = Request & {
     messages: AnthropicMessage[];
     llm: string;
     query: string;
+    currentCart: any[];
 }
 
 // Function to create a message for Anthropic
@@ -288,11 +80,9 @@ const createAnthropicAPIMessage = async (
     llm: string,
     systemPrompt: string,
     messages: AnthropicMessage[],
-    tools: any[]
-) => {
-    console.log('Messages: \n', messages);
-    console.log('llm: \n', llm);
+    tools: any[],
 
+) => {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
@@ -302,7 +92,7 @@ const createAnthropicAPIMessage = async (
         },
         body: JSON.stringify({
             model: llm,
-            system: systemPrompt,
+            // system: systemPrompt,
             messages: messages.map(msg => ({
                 role: msg.role,
                 content: typeof msg.content === 'string' ? msg.content : msg.content
@@ -321,25 +111,54 @@ const createAnthropicAPIMessage = async (
     return response;
 }
 
+
 // Function to get the response from Anthropic
 const getResponseAnthropic = async (req: Request, res: Response, next: NextFunction) => {
-    const { messages, llm, query } = req.body as GetAnthropicResponseRequest;
+    const startTime = Date.now();
+    const { messages, llm, query, currentCart } = req.body as GetAnthropicResponseRequest;
     const settings = await SettingsModel.findOne();
     if (!settings) {
         return res.status(400).json({ error: 'Settings not found' });
     }
 
+    console.log('Current cart: ', currentCart);
+
+
     let systemPrompt = "";
-    if (llm === "claude-3-5-sonnet-20241022") {
+    let userPromptTemplate = "";
+    let assistantPrefill = "";
+    if (llm.includes("sonnet")) {
         systemPrompt = settings.systemPromptSonnet;
-    } else if (llm === "claude-3-5-haiku-20241022") {
+        userPromptTemplate = settings.userPromptTemplateSonnet;
+        assistantPrefill = settings.assistantPrefillSonnet;
+    } else if (llm.includes("haiku")) {
         systemPrompt = settings.systemPromptHaiku;
+        userPromptTemplate = settings.userPromptTemplateHaiku;
+        assistantPrefill = settings.assistantPrefillHaiku;
     }
 
     try {
         let currentMessages: AnthropicMessage[] = [...messages];
 
-        const startTime = Date.now();
+        currentMessages.push({
+            role: "user",
+            content: `The current customer's cart is:
+                <current_cart>
+                ${JSON.stringify(currentCart)}
+                </current_cart>
+            `
+        });
+
+        console.log('Current messages (added current cart): ', currentMessages);
+
+        currentMessages.push({
+            role: "user",
+            content: userPromptTemplate.replace("{{user_query}}", query)
+        });
+
+        console.log('Current messages: ', currentMessages);
+
+
         let response = await createAnthropicAPIMessage(llm, systemPrompt, currentMessages, toolsAnthropic);
         let data = await response.json();
 
@@ -348,22 +167,32 @@ const getResponseAnthropic = async (req: Request, res: Response, next: NextFunct
             content: data.content
         });
 
+
         while (data.stop_reason === "tool_use") {
             const toolResults: toolContentanthropic[] = [];
+            const processedProductIds = new Set<number>();
 
             for (const contentBlock of data.content) {
                 if (contentBlock.type === "tool_use") {
+                    console.log('Tool use found: ', contentBlock);
                     const toolUseId = contentBlock.id;
-                    let result;
 
+                    let result;
                     switch (contentBlock.name) {
                         case "searchProducts":
-                            result = await performVectorSearch("products", "default", query, 20);
-                            console.log("Search results:", result);
+                            result = await performVectorSearch("products", "default", contentBlock.input['query'], 20);
+                            const uniqueResults = result.filter((product: any) => {
+                                if (processedProductIds.has(product.id)) {
+                                    return false;
+                                }
+                                processedProductIds.add(product.id);
+                                return true;
+                            });
+                            
                             toolResults.push({
                                 type: "tool_result",
                                 tool_use_id: toolUseId,
-                                content: JSON.stringify(result)
+                                content: JSON.stringify(uniqueResults)
                             });
                             break;
                         default:
@@ -382,8 +211,6 @@ const getResponseAnthropic = async (req: Request, res: Response, next: NextFunct
             response = await createAnthropicAPIMessage(llm, systemPrompt, currentMessages, toolsAnthropic);
             const newData = await response.json();
 
-
-
             if (newData.content) {
                 currentMessages.push({
                     role: "assistant",
@@ -393,7 +220,6 @@ const getResponseAnthropic = async (req: Request, res: Response, next: NextFunct
 
             data = newData;
         }
-
         const responseTime = Date.now() - startTime;
 
         let responseMessage = "";
@@ -407,24 +233,31 @@ const getResponseAnthropic = async (req: Request, res: Response, next: NextFunct
             responseMessage = JSON.parse(data.content);
         }
 
-
-        console.log('Response message: \n', responseMessage);
-
-
+        const cost = computeCost(llm, {
+            usage: {
+                prompt_tokens: data.usage.input_tokens,
+                completion_tokens: data.usage.output_tokens
+            }
+        });
 
         return res.status(200).json({
-            response: responseMessage,
+            aiResponse: responseMessage,
             messages: currentMessages,
             responseTime,
+            promptTokens: data.usage.input_tokens,
+            completionTokens: data.usage.output_tokens,
+            totalTokens: data.usage.input_tokens + data.usage.output_tokens,
+            cost: cost,
+            orderStatus: 'unknown',
+            sku: '',
+            products: '[]'
         });
     } catch (error) {
         handleAnthropicError(error, res, next);
     }
 }
 
-
 // Routes
-router.post("/getOpenAIResponse", getOpenAIResponse as express.RequestHandler);
 router.post("/getAnthropicResponse", getResponseAnthropic as express.RequestHandler);
 
 

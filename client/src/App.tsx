@@ -11,7 +11,6 @@ import Index from './pages/Index';
 import TestCatalog from './pages/SyntheticVoiceDataset';
 import RecordedVoices from './pages/RecordedVoices';
 import Chat from './pages/Chat';
-import TranscriptionBenchmarking from './pages/TranscriptionBenchmarking';
 import Settings from './pages/Settings';
 const allowedPassword = 'mouhalis';
 
@@ -153,20 +152,6 @@ function App() {
                   ) : <Navigate to="/login" replace />
                 }
               />
-              {/* <Route
-                path="/transcription-benchmarking"
-                element={
-                  isAuthenticated ? (
-                    <div className="flex flex-col w-full">
-                      <div className="flex justify-between items-center p-4 border-b">
-                        <SidebarTrigger />
-                        <UserEmailDisplay email={userEmail} />
-                      </div>
-                      <TranscriptionBenchmarking />
-                    </div>
-                  ) : <Navigate to="/login" replace />
-                }
-              /> */}
               <Route
                 path="/login"
                 element={<Login onLogin={handleLogin} />}

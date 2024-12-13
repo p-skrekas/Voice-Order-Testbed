@@ -25,39 +25,19 @@ const getSettings: RequestHandler = async (req, res, next) => {
     }
 };
 
-const updateSystemPromptOpenAILarge: RequestHandler = async (req, res, next) => {
-    try {
-        const { systemPromptOpenAILarge } = req.body;
-        
-        let settings = await SettingsModel.findOne();
-        if (!settings) {
-            settings = new SettingsModel({
-                systemPromptOpenAILarge: systemPromptOpenAILarge
-            });
-        } else {
-            settings.systemPromptOpenAILarge = systemPromptOpenAILarge;
-        }
-        
-        await settings.save();
-        res.status(200).json(settings);
-    } catch (error) {
-        console.error('Update error:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        next(new HttpError(`Failed to update settings: ${errorMessage}`, 500));
-    }
-};
 
-const updateSystemPromptOpenAIMini: RequestHandler = async (req, res, next) => {
+
+const updateUserPromptTemplateSonnet: RequestHandler = async (req, res, next) => {
     try {
-        const { systemPromptOpenAIMini } = req.body;
+        const { userPromptTemplateSonnet } = req.body;
 
         let settings = await SettingsModel.findOne();
         if (!settings) {
             settings = new SettingsModel({
-                systemPromptOpenAIMini: systemPromptOpenAIMini
+                userPromptTemplateSonnet: userPromptTemplateSonnet
             });
         } else {
-            settings.systemPromptOpenAIMini = systemPromptOpenAIMini;
+            settings.userPromptTemplateSonnet = userPromptTemplateSonnet;
         }
 
         await settings.save();
@@ -69,18 +49,17 @@ const updateSystemPromptOpenAIMini: RequestHandler = async (req, res, next) => {
     }
 }
 
-
-const updateSystemPromptSonnet: RequestHandler = async (req, res, next) => {
+const updateUserPromptTemplateHaiku: RequestHandler = async (req, res, next) => {
     try {
-        const { systemPromptSonnet } = req.body;
+        const { userPromptTemplateHaiku } = req.body;
 
         let settings = await SettingsModel.findOne();
         if (!settings) {
             settings = new SettingsModel({
-                systemPromptSonnet: systemPromptSonnet
+                userPromptTemplateHaiku: userPromptTemplateHaiku
             });
         } else {
-            settings.systemPromptSonnet = systemPromptSonnet;
+            settings.userPromptTemplateHaiku = userPromptTemplateHaiku;
         }
 
         await settings.save();
@@ -92,17 +71,39 @@ const updateSystemPromptSonnet: RequestHandler = async (req, res, next) => {
     }
 }
 
-const updateSystemPromptHaiku: RequestHandler = async (req, res, next) => {
+const updateAssistantPrefillSonnet: RequestHandler = async (req, res, next) => {
     try {
-        const { systemPromptHaiku } = req.body;
+        const { assistantPrefillSonnet } = req.body;
 
         let settings = await SettingsModel.findOne();
         if (!settings) {
             settings = new SettingsModel({
-                systemPromptHaiku: systemPromptHaiku
+                assistantPrefillSonnet: assistantPrefillSonnet
             });
         } else {
-            settings.systemPromptHaiku = systemPromptHaiku;
+            settings.assistantPrefillSonnet = assistantPrefillSonnet;
+        }
+
+        await settings.save();
+        res.status(200).json(settings);
+    } catch (error) {
+        console.error('Update error:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        next(new HttpError(`Failed to update settings: ${errorMessage}`, 500));
+    }
+}
+
+const updateAssistantPrefillHaiku: RequestHandler = async (req, res, next) => {
+    try {
+        const { assistantPrefillHaiku } = req.body;
+
+        let settings = await SettingsModel.findOne();
+        if (!settings) {
+            settings = new SettingsModel({
+                assistantPrefillHaiku: assistantPrefillHaiku
+            });
+        } else {
+            settings.assistantPrefillHaiku = assistantPrefillHaiku;
         }
 
         await settings.save();
@@ -137,10 +138,13 @@ const updateVectorSearchSettings: RequestHandler = async (req, res, next) => {
 };
 
 router.get("/", getSettings);
-router.put("/system-prompt-openai-large", updateSystemPromptOpenAILarge);
-router.put("/system-prompt-openai-mini", updateSystemPromptOpenAIMini);
-router.put("/system-prompt-sonnet", updateSystemPromptSonnet);
-router.put("/system-prompt-haiku", updateSystemPromptHaiku);
+
+router.put("/user-prompt-template-sonnet", updateUserPromptTemplateSonnet);
+router.put("/assistant-prefill-sonnet", updateAssistantPrefillSonnet);
+
+router.put("/user-prompt-template-haiku", updateUserPromptTemplateHaiku);
+router.put("/assistant-prefill-haiku", updateAssistantPrefillHaiku);
+
 router.put("/vector-search", updateVectorSearchSettings);
 
 export default router;
