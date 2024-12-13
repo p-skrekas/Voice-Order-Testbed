@@ -5,6 +5,9 @@ import { performVectorSearch } from "../utils/ai/search";
 
 const router = Router();
 
+if (!process.env.ANTHROPIC_API_KEY) {
+    throw new Error('ANTHROPIC_API_KEY is not defined in the environment variables');
+}
 
 
 // Function to compute the cost of the response for all models
